@@ -1,20 +1,23 @@
 + Dateien in einem Verzeichnis finden und auflisten
 + Alle Unterverzeichnisse ebenfalls durchsuchen?
-Laufwerke anzeigen/auswählen
++ Laufwerke anzeigen/auswählen
 + .7z öffnen und entpacken
-Passwordgeschützte .7z öffnen, PW übergeben und entpacken
++ Passwordgeschützte .7z öffnen, PW übergeben und entpacken
 + Daten im aktuellen Verzeichnis entpacken
-Exception bei falschem Password
++ Exception bei falschem Password
 Option zum Abbrechen des Suchvorgangs/Entpackvorgangs
 + Auflisten aller gefundenen Dateien
-Auflisten aller Dateien, die (nicht) erfolgreich entpackt wurden.
++ Auflisten aller Dateien, die (nicht) erfolgreich entpackt wurden.
 + Umgang mit Zugriffsbeschränkung
 
 
 + Erstellt von 0-byte Dateien, wenn das Extrahierene fehlschlägt (falsches PW) > try-Block > im Anschluss löschen
-Möglichkeit, nur Dateien mit bestimmter Zeichenfolge im Namen zu extrahieren
-Nur Dateien entpacken, die die Zeichenfolge NICHT enthalten
++ Möglichkeit, nur Dateien mit bestimmter Zeichenfolge im Namen zu extrahieren
++ Nur Dateien entpacken, die die Zeichenfolge NICHT enthalten
 Archive ohne PW werden immer entpackt, auch wenn ein PW eingegeben wurde
++ Partition auswählen
+Pfad auswählen
+Progress Bar für Suche + Entpacken -> Bar aktualisiert sich nicht -> Service + Task
 
 Programm-Aufbau
 
