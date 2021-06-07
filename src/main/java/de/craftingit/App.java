@@ -21,6 +21,10 @@ public class App extends Application {
         stage.setScene(scene);
         stage.setTitle("unZipper");
         stage.show();
+
+        stage.setMinWidth(965);
+        stage.setMinHeight(700);
+        //stage.onCloseRequestProperty();
     }
 
     static void setRoot(String fxml) throws IOException {

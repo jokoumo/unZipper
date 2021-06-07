@@ -34,7 +34,7 @@ public class SearchService extends Service<ObservableList<Archive>> {
                     Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                         @Override
                         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                            if(file.toString().endsWith(format)) {
+                            if(file.toString().endsWith(format) && !file.toString().contains("$RECYCLE")) {
                                 if(file.getFileName().toString().contains(filter)) {
                                     if(exclude.isEmpty() || !file.getFileName().toString().contains(exclude)) {
                                         archives.add(new Archive(file.toAbsolutePath()));

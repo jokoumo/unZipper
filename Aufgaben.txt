@@ -16,8 +16,18 @@ Option zum Abbrechen des Suchvorgangs/Entpackvorgangs
 + Nur Dateien entpacken, die die Zeichenfolge NICHT enthalten
 Archive ohne PW werden immer entpackt, auch wenn ein PW eingegeben wurde
 + Partition auswählen
-Pfad auswählen
-Progress Bar für Suche + Entpacken -> Bar aktualisiert sich nicht -> Service + Task
+Nur Tabellenauswahl entpacken oder alles entpacken (Button: "Entapcken" + " Alles Entpacken")
++ Progress Bar für Suche + Entpacken -> Bar aktualisiert sich nicht -> Service + Task
++ FX-Elemente sperren sich, wenn sie über einen neuen Thread aktualisiert werden (sollte nur über App-Thread passieren -> nutze service.onScheduled/onSucceeded/onCancelled... oder "Platform.runLater(() -> ...) im neuen Thread
+
+Harter Abbruch Task(Suchvorgang+Entpcken)
++ Weicher Abbruch Entpacken, aktueller Vorgang wird noch beendet
+.zip und .rar (und andere Formate?) Unterstützung
+Warnung beim Beenden, wenn noch entpackt wird
+Optional: bereits entpackte Archive bei neuer Suche merken
+Layout skalierbar, wie verhalten sich die Elemente?
+Bisher nur als Windows App (wie sind die Pfade auf Linux, iOS...?)
+Variante, die mehrere Archive gleichzeitig entpackt -> Auswahl der maximalen Threads
 
 Programm-Aufbau
 

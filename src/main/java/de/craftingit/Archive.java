@@ -13,18 +13,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Archive {
-    private static double countErrors = 0;
-    private static long countId = 1;
-    private final long id;
+    private static int countId = 1;
+    private final int id;
     private final Path dir;
     private String status;
-    private String error;
+    private boolean isExtracted = false;
 
     Archive(Path path) {
         path = Paths.get(path.toString().replace(".\\", ""));
         this.dir = path;
         this.status = "Verpackt";
-        this.error = "-";
         this.id = countId;
         countId++;
     }
@@ -33,23 +31,15 @@ public class Archive {
         return dir;
     }
 
-    public static double getCountErrors() {
-        return countErrors;
-    }
-
-    public static void setCountErrors(double countErrors) {
-        Archive.countErrors = countErrors;
-    }
-
-    public static long getCountId() {
+    public static int getCountId() {
         return countId;
     }
 
-    public static void setCountId(long countId) {
+    public static void setCountId(int countId) {
         Archive.countId = countId;
     }
 
-    public long getId() {
+    public int getId() {
         return id;
     }
 
@@ -61,23 +51,18 @@ public class Archive {
         this.status = status;
     }
 
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
-
     public String toString() {
         return this.dir.toString();
+    }
+
+    public boolean isExtracted() {
+        return isExtracted;
     }
 
     public void print() {
         System.out.println("ID: " + this.id);
         System.out.println("Pfad: " + this.dir);
         System.out.println("Status: " + this.status);
-        System.out.println("Fehler: " + this.error);
     }
 
     public void extract(String password) {
@@ -94,14 +79,9 @@ public class Archive {
                     file.read(content, 0, content.length);
                     out.write(content);
                     this.status = "Entpackt";
-                    this.error = "-";
-                } catch (PasswordRequiredException ex) {
-                    this.error = "Passwort erforderlich.";
-                    countErrors++;
-                    break;
-                } catch (IOException ex) {
-                    this.error = "Passwort falsch oder Archiv beschädigt.";
-                    countErrors++;
+                    this.isExtracted = true;
+                } catch (Exception ex) {
+                    this.status = "Passwort falsch oder Archiv beschädigt.";
                     break;
                 } finally {
                     try {
@@ -114,8 +94,7 @@ public class Archive {
                 }
             }
         } catch(IOException e) {
-            this.error = e.getMessage();
-            countErrors++;
+            this.status = "Passwort falsch oder Archiv beschädigt.";
         }
     }
 }

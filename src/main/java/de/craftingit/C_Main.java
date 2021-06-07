@@ -1,33 +1,52 @@
 package de.craftingit;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class C_Main {
+    private Stage stage = null;
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
     private Path dir;
-    private double quantityNotExtracted;
+    private int maxArchives;
+    private int countArchives;
+    private double windowWidth;
+    private SearchService searchService;
+    private ScheduledService<Boolean> extractService;
 
     @FXML
     private AnchorPane anchorPane_main;
     @FXML
     private Button button_search;
     @FXML
+    private Button button_cancelSearch;
+    @FXML
     private Button button_extract;
+    @FXML
+    private Button button_cancelExtract;
+    @FXML
+    private Label label_status;
     @FXML
     private ComboBox<String> comboBox_roots;
     @FXML
@@ -38,8 +57,6 @@ public class C_Main {
     private TableColumn<Archive, String> tColumn_dir;
     @FXML
     private TableColumn<Archive, String> tColumn_status;
-    @FXML
-    private TableColumn<Archive, String> tColumn_error;
     @FXML
     private TableColumn<Archive, Long> tColumn_id;
     @FXML
@@ -64,15 +81,47 @@ public class C_Main {
 
         tColumn_dir.setCellValueFactory(new PropertyValueFactory<>("dir"));
         tColumn_status.setCellValueFactory(new PropertyValueFactory<>("status"));
-        tColumn_error.setCellValueFactory(new PropertyValueFactory<>("error"));
         tColumn_id.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+        button_search.setDisable(false);
+        button_cancelSearch.setVisible(false);
+        button_extract.setDisable(true);
+        button_cancelExtract.setVisible(false);
+        label_status.setVisible(false);
+
+        ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
+            @Override
+            protected Task<Boolean> createTask() {
+                return new Task<Boolean>() {
+                    @Override
+                    protected Boolean call() {
+                        try {
+                            if (stage == null) {
+                                stage = (Stage) anchorPane_main.getScene().getWindow();
+                            }
+                            if (windowWidth != stage.getWidth()) {
+                                windowWidth = stage.getWidth();
+                                progressBar.setLayoutX(windowWidth / 2 - progressBar.getWidth() / 2);
+                                label_status.setLayoutX(windowWidth / 2 - label_status.getWidth() / 2);
+                                tColumn_dir.setPrefWidth(tColumn_dir.getMinWidth() + windowWidth - 965);
+                            }
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
+                        }
+                        return null;
+                    }
+                };
+            }
+        };
+        backgroundService.setPeriod(Duration.millis(50));
+        backgroundService.start();
     }
 
     @FXML
     private void updateRoots() {
         comboBox_roots.getItems().clear();
         roots = File.listRoots();
-        for(File root : roots) {
+        for (File root : roots) {
             comboBox_roots.getItems().add(root.toString());
         }
         comboBox_roots.setValue(roots[0].toString());
@@ -90,80 +139,112 @@ public class C_Main {
         progressBar.setProgress(-1);
         Archive.setCountId(1);
         archives.clear();
-        button_search.setDisable(true);
+        button_search.setVisible(false);
+        button_cancelSearch.setVisible(true);
+        label_status.setVisible(true);
+        label_status.setText("Suche läuft...");
 
-        Service<ObservableList<Archive>> searchService = new SearchService(dir, comboBox_formats.getValue(),
-                                                                  textField_filter.getText(), textField_exclude.getText());
+        searchService = new SearchService(dir, comboBox_formats.getValue(),
+                textField_filter.getText(), textField_exclude.getText());
 
-        searchService.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                archives.addAll(searchService.getValue());
-                progressBar.setProgress(0);
-                quantityNotExtracted = archives.size();
-                tableView_archives.setItems(archives);
-                button_extract.setDisable(tableView_archives.getItems().isEmpty());
-                button_search.setDisable(false);
-            }
+        searchService.setOnSucceeded(workerStateEvent -> {
+            archives.addAll(searchService.getValue());
+            progressBar.setProgress(0);
+            maxArchives = archives.size();
+            tableView_archives.setItems(archives);
+            button_extract.setDisable(tableView_archives.getItems().isEmpty());
+            button_search.setVisible(true);
+            button_cancelSearch.setVisible(false);
+            label_status.setText("Suche abgeschlossen.");
         });
         searchService.start();
 
-//        try {
-//            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
-//                @Override
-//                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-//                    if(file.toString().endsWith(comboBox_formats.getValue())) {
-//                        if(file.getFileName().toString().contains(textField_filter.getText())) {
-//                            if(textField_exclude.getText().isEmpty() || !file.getFileName().toString().contains(textField_exclude.getText())) {
-//                                archives.add(new Archive(file.toAbsolutePath()));
-//                                quantityNotExtracted++;
-//                                return FileVisitResult.CONTINUE;
-//                            }
-//                        }
-//                    }
-//                    return FileVisitResult.SKIP_SUBTREE;
-//                }
-//
-//                @Override
-//                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-//                    if(exc instanceof AccessDeniedException)
-//                        return FileVisitResult.SKIP_SUBTREE;
-//                    return super.visitFileFailed(file, exc);
-//                }
-//            });
-//        } catch (IOException e) {
-//            System.out.println("Fehler bei der Suche: " + e.getMessage());
-//        }
+        maxArchives = archives.size();
+    }
+
+    @FXML
+    private void cancelSearch() {
+        searchService.cancel();
+        progressBar.setProgress(0);
+        button_search.setVisible(true);
+        button_cancelSearch.setVisible(false);
+        label_status.setText("Suche abgebrochen.");
     }
 
     @FXML
     private void extractArchives() {
+        countArchives = 0;
         progressBar.setProgress(0);
+        button_extract.setVisible(false);
+        button_cancelExtract.setVisible(true);
+        button_search.setDisable(true);
+        label_status.setVisible(true);
 
-        Archive.setCountErrors(0);
-        double count = 0;
+        extractService = new ScheduledService<Boolean>() {
+            @Override
+            protected Task<Boolean> createTask() {
+                return new Task<Boolean>() {
+                    @Override
+                    protected Boolean call() {
+                        try {
+                            if (!archives.get(countArchives).isExtracted())
+                                archives.get(countArchives).extract(pwField.getText());
+                        } catch (Exception e) {
+                            this.cancel();
 
-        for(Archive archive : archives) {
-            if(archive.getStatus().equals("Verpackt")) {
-                archive.extract(pwField.getText());
-                count++;
-                progressBar.setProgress(count / quantityNotExtracted);
+                            Platform.runLater(() -> {
+                                button_extract.setVisible(true);
+                                button_cancelExtract.setVisible(false);
+                                button_search.setDisable(false);
+                                button_cancelExtract.setDisable(false);
+                                button_cancelExtract.setVisible(false);
+                                if (countArchives < 0) {
+                                    label_status.setText("Entpacken abgebrochen.");
+                                    progressBar.setProgress(0);
+                                } else
+                                    label_status.setText("Fertig!");
+                            });
+                        }
+                        return null;
+                    }
+                };
             }
-        }
+        };
 
-        tableView_archives.refresh();
-        quantityNotExtracted = Archive.getCountErrors();
+        extractService.setOnScheduled(workerStateEvent -> {
+            if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
+                label_status.setText("Entpacke " + (countArchives + 1) + "/" + archives.size());
+                archives.get(countArchives).setStatus("Wird entpackt...");
+                tableView_archives.refresh();
+                if (checkBox_hideExtracted.isSelected())
+                    hideExtracted();
+            }
+        });
 
-        if(checkBox_hideExtracted.isSelected())
-            hideExtracted();
+        extractService.setOnSucceeded(workerStateEvent -> {
+            countArchives++;
+            tableView_archives.refresh();
+            progressBar.setProgress((double) countArchives / (double) archives.size());
+        });
+
+        extractService.start();
+    }
+
+    @FXML
+    private void cancelExtract() {
+        countArchives = -10;
+        button_cancelExtract.setDisable(true);
+        label_status.setVisible(true);
+        label_status.setText("Vorgang wird abgebrochen. Bitte warten.");
+        progressBar.setProgress(-1);
     }
 
     @FXML
     private void hideExtracted() {
-        if(checkBox_hideExtracted.isSelected()) {
+        if (checkBox_hideExtracted.isSelected()) {
             ObservableList<Archive> hiddenArchives = FXCollections.observableArrayList();
-            for(Archive archive : archives) {
-                if(archive.getStatus().equals("Verpackt"))
+            for (Archive archive : archives) {
+                if (!archive.isExtracted())
                     hiddenArchives.add(archive);
             }
             tableView_archives.setItems(hiddenArchives);
@@ -176,22 +257,26 @@ public class C_Main {
     private void showAppInfo() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Information");
-        alert.setHeaderText("Entwickelt von André Krippendorf");
+        alert.setHeaderText("unZipper by André Krippendorf");
         alert.setContentText(
                 "CraftingIT GmbH\n" +
-                "Erzbergerstraße 1-2\n" +
-                "39104 Magdeburg\n" +
-                "Deutschland\n" +
-                "Telefon: +49 391 28921 500\n" +
-                "Fax: +49 391 28921 555\n" +
-                "Mail: info@crafting-it.de");
+                        "Erzbergerstraße 1-2\n" +
+                        "39104 Magdeburg\n" +
+                        "Deutschland\n" +
+                        "Telefon: +49 391 28921 500\n" +
+                        "Fax: +49 391 28921 555\n" +
+                        "Mail: info@crafting-it.de");
         alert.show();
     }
 
     @FXML
     private void closeApp() {
-        Stage stage = (Stage) anchorPane_main.getScene().getWindow();
-        stage.close();
+        //TODO Warnmeldung bei laufendem Service
+        if (searchService.isRunning() || extractService.isRunning()) {
+
+        } else {
+            stage.close();
+        }
     }
 
 //    @FXML
