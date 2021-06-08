@@ -2,6 +2,7 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
@@ -19,10 +20,10 @@
 <AnchorPane fx:id="anchorPane_main" onDragDone="#searchArchives" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.craftingit.C_Main">
    <children>
       <Label layoutX="14.0" layoutY="36.0" text="Partition" />
-      <Button fx:id="button_updateRoots" layoutX="170.0" layoutY="53.0" mnemonicParsing="false" onAction="#updateRoots" text="Aktualisieren" />
-      <ComboBox fx:id="comboBox_roots" layoutX="14.0" layoutY="53.0" onAction="#changeDir" prefWidth="150.0" />
+      <Button fx:id="button_updateRoots" layoutX="104.0" layoutY="53.0" mnemonicParsing="false" onAction="#updateRoots" text="Aktualisieren" />
+      <ComboBox fx:id="comboBox_roots" layoutX="14.0" layoutY="53.0" onAction="#changeDir" prefHeight="25.0" prefWidth="84.0" />
       <Button fx:id="button_search" layoutX="14.0" layoutY="161.0" mnemonicParsing="false" onAction="#searchArchives" text="Suchen" />
-      <ComboBox fx:id="comboBox_formats" layoutX="14.0" layoutY="100.0" prefWidth="150.0" />
+      <ComboBox fx:id="comboBox_formats" layoutX="14.0" layoutY="100.0" prefHeight="25.0" prefWidth="84.0" />
       <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="140.0" layoutX="435.0" layoutY="43.0" stroke="#909090" strokeType="INSIDE" width="498.0" />
       <TextField fx:id="textField_filter" layoutX="447.0" layoutY="92.0" prefHeight="25.0" prefWidth="221.0" />
       <TextField fx:id="textField_exclude" layoutX="447.0" layoutY="144.0" prefHeight="25.0" prefWidth="221.0" />
@@ -38,13 +39,12 @@
         </columns>
       </TableView>
       <Label layoutX="14.0" layoutY="83.0" text="Format" />
-      <Button fx:id="button_extract" disable="true" layoutX="15.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractArchives" text="Entpacken" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="15.0" />
       <Label layoutX="439.0" layoutY="47.0" text="Optional">
          <font>
             <Font name="System Bold" size="12.0" />
          </font>
       </Label>
-      <CheckBox fx:id="checkBox_hideExtracted" layoutX="170.0" layoutY="165.0" mnemonicParsing="false" onAction="#hideExtracted" text="Entpackte Archive verbergen." />
+      <CheckBox fx:id="checkBox_hideExtracted" layoutX="104.0" layoutY="165.0" mnemonicParsing="false" onAction="#hideExtracted" text="Entpackte Archive verbergen." />
       <MenuBar layoutY="2.0" prefHeight="25.0" prefWidth="950.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
         <menus>
           <Menu mnemonicParsing="false" text="Datei">
@@ -64,8 +64,14 @@
       <Button fx:id="button_cancelSearch" layoutX="14.0" layoutY="161.0" mnemonicParsing="false" onAction="#cancelSearch" text="Abbrechen" visible="false" />
       <Button fx:id="button_cancelExtract" layoutX="15.0" layoutY="662.0" mnemonicParsing="false" onAction="#cancelExtract" text="Abbrechen" visible="false" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="15.0" />
       <Label fx:id="label_status" alignment="CENTER" contentDisplay="CENTER" layoutX="350.0" layoutY="671.0" prefHeight="17.0" prefWidth="250.0" textAlignment="JUSTIFY" AnchorPane.bottomAnchor="12.0" />
-      <Label layoutX="696.0" layoutY="118.0" prefHeight="36.0" prefWidth="221.0" text="Achtung: Archive ohne Passwort, werden immer entpackt." wrapText="true" />
-      <Button fx:id="button_extractSingle" layoutX="118.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractSingle" text="Auswahl entpacken" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="118.0" />
-      <Button fx:id="button_multi" layoutX="254.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractMulti" text="MultiTest" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="254.0" />
+      <Label layoutX="697.0" layoutY="118.0" prefHeight="18.0" prefWidth="50.0" text="Hinweis:" wrapText="true">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font></Label>
+      <Button fx:id="button_extractSingle" layoutX="122.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractSingle" text="Auswahl entpacken" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="122.0" />
+      <Button fx:id="button_extractAll" layoutX="18.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractAll" text="Alle entpacken" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="18.0" />
+      <Label layoutX="749.0" layoutY="119.0" prefHeight="36.0" prefWidth="170.0" text="Archive ohne Passwortschutz, werden immer entpackt." wrapText="true" />
+      <ChoiceBox fx:id="choiceBox_tasks" layoutX="258.0" layoutY="53.0" prefHeight="25.0" prefWidth="84.0" />
+      <Label layoutX="258.0" layoutY="36.0" text="Prozesse" />
    </children>
 </AnchorPane>

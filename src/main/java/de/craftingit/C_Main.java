@@ -3,11 +3,9 @@ package de.craftingit;
 import java.io.File;
 import java.nio.file.*;
 
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
-import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -27,7 +25,8 @@ public class C_Main {
     private int countSucceededServices;
     private double windowWidth;
     private SearchService searchService;
-    private ScheduledService<Boolean> extractService;
+    private ExtractService extractService;
+    private ScheduledService<Boolean> extractTaskService;
 
     @FXML
     private AnchorPane anchorPane_main;
@@ -36,7 +35,9 @@ public class C_Main {
     @FXML
     private Button button_cancelSearch;
     @FXML
-    private Button button_extract;
+    private Button button_extractAll;
+    @FXML
+    private Button button_extractSingle;
     @FXML
     private Button button_cancelExtract;
     @FXML
@@ -45,6 +46,8 @@ public class C_Main {
     private ComboBox<String> comboBox_roots;
     @FXML
     private ComboBox<String> comboBox_formats;
+    @FXML
+    private ChoiceBox<Integer> choiceBox_tasks;
     @FXML
     private TableView<Archive> tableView_archives;
     @FXML
@@ -68,6 +71,11 @@ public class C_Main {
     private void initialize() {
         updateRoots();
 
+        choiceBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
+        for(int i = 1; i <= maxTasks; i++)
+            choiceBox_tasks.getItems().add(i);
+        choiceBox_tasks.setValue(1);
+
         comboBox_formats.getItems().add(".7z");
         //comboBox_formats.getItems().add(".zip");
         //comboBox_formats.getItems().add(".rar");
@@ -79,7 +87,8 @@ public class C_Main {
 
         button_search.setDisable(false);
         button_cancelSearch.setVisible(false);
-        button_extract.setDisable(true);
+        button_extractAll.setDisable(true);
+        button_extractSingle.setDisable(true);
         button_cancelExtract.setVisible(false);
         label_status.setVisible(false);
 
@@ -149,7 +158,8 @@ public class C_Main {
             archives.addAll(searchService.getValue());
             progressBar.setProgress(0);
             tableView_archives.setItems(archives);
-            button_extract.setDisable(tableView_archives.getItems().isEmpty());
+            button_extractAll.setDisable(tableView_archives.getItems().isEmpty());
+            button_extractSingle.setDisable(tableView_archives.getItems().isEmpty());
             button_search.setVisible(true);
             button_cancelSearch.setVisible(false);
             label_status.setText("Suche abgeschlossen.");
@@ -164,70 +174,6 @@ public class C_Main {
         button_search.setVisible(true);
         button_cancelSearch.setVisible(false);
         label_status.setText("Suche abgebrochen.");
-    }
-
-    @FXML
-    private void extractArchives() {
-        countArchives = 0;
-        countTasks = 0;
-        progressBar.setProgress(0);
-        button_extract.setVisible(false);
-        button_cancelExtract.setVisible(true);
-        button_search.setDisable(true);
-        label_status.setVisible(true);
-
-        extractArchivesStart();
-    }
-
-    private void extractArchivesStart() {
-        extractService = new ScheduledService<Boolean>() {
-            @Override
-            protected Task<Boolean> createTask() {
-                return new Task<Boolean>() {
-                    @Override
-                    protected Boolean call() {
-                        try {
-                            if (!archives.get(countArchives).isExtracted()) {
-                                archives.get(countArchives).extract(pwField.getText());
-                            }
-                        } catch (Exception e) {
-                            this.cancel();
-
-                            Platform.runLater(() -> {
-                                button_extract.setVisible(true);
-                                button_cancelExtract.setVisible(false);
-                                button_search.setDisable(false);
-                                button_cancelExtract.setDisable(false);
-                                button_cancelExtract.setVisible(false);
-                                if (countArchives < 0) {
-                                    label_status.setText("Entpacken abgebrochen.");
-                                    progressBar.setProgress(0);
-                                } else
-                                    label_status.setText("Fertig!");
-                            });
-                        }
-                        return null;
-                    }
-                };
-            }
-        };
-
-        extractService.setOnRunning(workerStateEvent -> {
-            if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
-                label_status.setText("Entpacke " + (countArchives + 1) + "/" + archives.size());
-                tableView_archives.refresh();
-                if (checkBox_hideExtracted.isSelected())
-                    hideExtracted();
-            }
-        });
-
-        extractService.setOnSucceeded(workerStateEvent -> {
-            countArchives++;
-            tableView_archives.refresh();
-            progressBar.setProgress((double) countArchives / (double) archives.size());
-        });
-
-        extractService.start();
     }
 
     @FXML
@@ -247,76 +193,51 @@ public class C_Main {
     }
 
     @FXML
-    private void extractMulti() {
+    private void extractAll() {
         countSucceededServices = 0;
         countArchives = 0;
         countTasks = 0;
         progressBar.setProgress(0);
-        button_extract.setVisible(false);
+        button_extractAll.setVisible(false);
+        button_extractSingle.setVisible(false);
         button_cancelExtract.setVisible(true);
         button_search.setDisable(true);
         label_status.setVisible(true);
         label_status.setText("Entpacke...");
 
-        ScheduledService<Boolean> service = new ScheduledService<Boolean>() {
-            @Override
-            protected Task<Boolean> createTask() {
-                return new Task<Boolean>() {
-                    @Override
-                    protected Boolean call() throws Exception {
-                        if(countArchives >= archives.size())
-                            this.cancel();
-                        else if(countTasks < maxTasks) {
-                            extractMultiStart(countArchives);
-                            countArchives++;
-                        }
-                        System.out.println(countTasks + " : " + countArchives + " : " + archives.size());
-
-                        return null;
-                    }
-                };
-            }
-        };
-        service.setPeriod(Duration.millis(100));
-        service.start();
-    }
-
-    @FXML
-    private void extractMultiStart(int index) {
-
-        Service<Boolean> service = new Service<Boolean>() {
+        extractTaskService = new ScheduledService<Boolean>() {
             @Override
             protected Task<Boolean> createTask() {
                 return new Task<Boolean>() {
                     @Override
                     protected Boolean call() {
-                        try {
-                            if (!archives.get(index).isExtracted()) {
-                                countTasks++;
-                                archives.get(index).extract(pwField.getText());
-
-                                if(index == (archives.size() -1))   // letztes Archiv
-                                    return true;
-                            }
-                        } catch (Exception e) {
-//                            Platform.runLater(() -> {
-//                                button_extract.setVisible(true);
-//                                button_cancelExtract.setVisible(false);
-//                                button_search.setDisable(false);
-//                                button_cancelExtract.setDisable(false);
-//                                button_cancelExtract.setVisible(false);
-//                                if (countArchives < 0) {
-//                                    label_status.setText("Entpacken abgebrochen.");
-//                                    progressBar.setProgress(0);
-//                                }
-//                            });
+                        if(countArchives < 0 || countArchives >= archives.size()) {
+                            this.cancel();
+                        } else
+                        if(countTasks < choiceBox_tasks.getValue()) {
+                            extractAllStart(countArchives);
+                            countTasks++;
+                            countArchives++;
+                            tableView_archives.refresh();
                         }
-                        return false;
+                        return null;
                     }
                 };
             }
         };
-        service.setOnRunning(workerStateEvent -> {
+        extractTaskService.setPeriod(Duration.millis(100));
+        extractTaskService.start();
+    }
+
+    @FXML
+    private void extractAllStart(int index) {
+        try {
+            extractService = new ExtractService(archives.get(index), pwField.getText());
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println(e.getMessage());
+        }
+
+        extractService.setOnRunning(workerStateEvent -> {
             if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
                 tableView_archives.refresh();
                 if (checkBox_hideExtracted.isSelected())
@@ -324,13 +245,14 @@ public class C_Main {
             }
         });
 
-        service.setOnSucceeded(workerStateEvent -> {
+        extractService.setOnSucceeded(workerStateEvent -> {
             countTasks--;
             countSucceededServices++;
             tableView_archives.refresh();
 
-            if(service.getValue()) {
-                button_extract.setVisible(true);
+            if(index == (archives.size() -1)) {
+                button_extractAll.setVisible(true);
+                button_extractSingle.setVisible(true);
                 button_cancelExtract.setVisible(false);
                 button_search.setDisable(false);
                 button_cancelExtract.setDisable(false);
@@ -343,7 +265,7 @@ public class C_Main {
             } else
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
         });
-        service.start();
+        extractService.start();
     }
 
     @FXML
