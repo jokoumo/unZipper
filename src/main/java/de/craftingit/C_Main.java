@@ -9,17 +9,9 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import javafx.concurrent.WorkerStateEvent;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseDragEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -29,8 +21,10 @@ public class C_Main {
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
     private Path dir;
-    private int maxArchives;
+    private final int maxTasks = 6;
+    private int countTasks;
     private int countArchives;
+    private int countSucceededServices;
     private double windowWidth;
     private SearchService searchService;
     private ScheduledService<Boolean> extractService;
@@ -98,6 +92,10 @@ public class C_Main {
                         try {
                             if (stage == null) {
                                 stage = (Stage) anchorPane_main.getScene().getWindow();
+                                stage.setOnCloseRequest(event -> {
+                                    event.consume();
+                                    closeApp();
+                                });
                             }
                             if (windowWidth != stage.getWidth()) {
                                 windowWidth = stage.getWidth();
@@ -150,7 +148,6 @@ public class C_Main {
         searchService.setOnSucceeded(workerStateEvent -> {
             archives.addAll(searchService.getValue());
             progressBar.setProgress(0);
-            maxArchives = archives.size();
             tableView_archives.setItems(archives);
             button_extract.setDisable(tableView_archives.getItems().isEmpty());
             button_search.setVisible(true);
@@ -158,8 +155,6 @@ public class C_Main {
             label_status.setText("Suche abgeschlossen.");
         });
         searchService.start();
-
-        maxArchives = archives.size();
     }
 
     @FXML
@@ -174,12 +169,17 @@ public class C_Main {
     @FXML
     private void extractArchives() {
         countArchives = 0;
+        countTasks = 0;
         progressBar.setProgress(0);
         button_extract.setVisible(false);
         button_cancelExtract.setVisible(true);
         button_search.setDisable(true);
         label_status.setVisible(true);
 
+        extractArchivesStart();
+    }
+
+    private void extractArchivesStart() {
         extractService = new ScheduledService<Boolean>() {
             @Override
             protected Task<Boolean> createTask() {
@@ -187,8 +187,9 @@ public class C_Main {
                     @Override
                     protected Boolean call() {
                         try {
-                            if (!archives.get(countArchives).isExtracted())
+                            if (!archives.get(countArchives).isExtracted()) {
                                 archives.get(countArchives).extract(pwField.getText());
+                            }
                         } catch (Exception e) {
                             this.cancel();
 
@@ -211,10 +212,9 @@ public class C_Main {
             }
         };
 
-        extractService.setOnScheduled(workerStateEvent -> {
+        extractService.setOnRunning(workerStateEvent -> {
             if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
                 label_status.setText("Entpacke " + (countArchives + 1) + "/" + archives.size());
-                archives.get(countArchives).setStatus("Wird entpackt...");
                 tableView_archives.refresh();
                 if (checkBox_hideExtracted.isSelected())
                     hideExtracted();
@@ -237,6 +237,113 @@ public class C_Main {
         label_status.setVisible(true);
         label_status.setText("Vorgang wird abgebrochen. Bitte warten.");
         progressBar.setProgress(-1);
+    }
+
+    @FXML
+    private void extractSingle() {
+        Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
+        archive.extract(pwField.getText());
+        tableView_archives.refresh();
+    }
+
+    @FXML
+    private void extractMulti() {
+        countSucceededServices = 0;
+        countArchives = 0;
+        countTasks = 0;
+        progressBar.setProgress(0);
+        button_extract.setVisible(false);
+        button_cancelExtract.setVisible(true);
+        button_search.setDisable(true);
+        label_status.setVisible(true);
+        label_status.setText("Entpacke...");
+
+        ScheduledService<Boolean> service = new ScheduledService<Boolean>() {
+            @Override
+            protected Task<Boolean> createTask() {
+                return new Task<Boolean>() {
+                    @Override
+                    protected Boolean call() throws Exception {
+                        if(countArchives >= archives.size())
+                            this.cancel();
+                        else if(countTasks < maxTasks) {
+                            extractMultiStart(countArchives);
+                            countArchives++;
+                        }
+                        System.out.println(countTasks + " : " + countArchives + " : " + archives.size());
+
+                        return null;
+                    }
+                };
+            }
+        };
+        service.setPeriod(Duration.millis(100));
+        service.start();
+    }
+
+    @FXML
+    private void extractMultiStart(int index) {
+
+        Service<Boolean> service = new Service<Boolean>() {
+            @Override
+            protected Task<Boolean> createTask() {
+                return new Task<Boolean>() {
+                    @Override
+                    protected Boolean call() {
+                        try {
+                            if (!archives.get(index).isExtracted()) {
+                                countTasks++;
+                                archives.get(index).extract(pwField.getText());
+
+                                if(index == (archives.size() -1))   // letztes Archiv
+                                    return true;
+                            }
+                        } catch (Exception e) {
+//                            Platform.runLater(() -> {
+//                                button_extract.setVisible(true);
+//                                button_cancelExtract.setVisible(false);
+//                                button_search.setDisable(false);
+//                                button_cancelExtract.setDisable(false);
+//                                button_cancelExtract.setVisible(false);
+//                                if (countArchives < 0) {
+//                                    label_status.setText("Entpacken abgebrochen.");
+//                                    progressBar.setProgress(0);
+//                                }
+//                            });
+                        }
+                        return false;
+                    }
+                };
+            }
+        };
+        service.setOnRunning(workerStateEvent -> {
+            if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
+                tableView_archives.refresh();
+                if (checkBox_hideExtracted.isSelected())
+                    hideExtracted();
+            }
+        });
+
+        service.setOnSucceeded(workerStateEvent -> {
+            countTasks--;
+            countSucceededServices++;
+            tableView_archives.refresh();
+
+            if(service.getValue()) {
+                button_extract.setVisible(true);
+                button_cancelExtract.setVisible(false);
+                button_search.setDisable(false);
+                button_cancelExtract.setDisable(false);
+                button_cancelExtract.setVisible(false);
+                label_status.setText("Fertig!");
+            }
+            if (countArchives < 0) {
+                label_status.setText("Entpacken abgebrochen.");
+                progressBar.setProgress(0);
+            } else
+                progressBar.setProgress((double) countSucceededServices / (double) archives.size());
+        });
+        service.start();
     }
 
     @FXML
@@ -271,12 +378,26 @@ public class C_Main {
 
     @FXML
     private void closeApp() {
-        //TODO Warnmeldung bei laufendem Service
-        if (searchService.isRunning() || extractService.isRunning()) {
+        ButtonType buttonYes = new ButtonType("Ja", ButtonBar.ButtonData.YES);
+        ButtonType buttonNo = new ButtonType("Nein", ButtonBar.ButtonData.NO);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", buttonYes, buttonNo);
+        alert.setTitle("Beenden");
+        alert.setHeaderText("Prozesse abbrechen und beenden?");
 
+        if(stage == null)
+            stage = (Stage) anchorPane_main.getScene().getWindow();
+
+        if(searchService != null && searchService.isRunning()) {
+            alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?");
+        } else if(extractService != null && extractService.isRunning()) {
+            alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\nEs kann zu einem Datenverlust kommen.");
         } else {
             stage.close();
+            return;
         }
+
+        if(alert.showAndWait().get() == buttonYes)
+            stage.close();
     }
 
 //    @FXML

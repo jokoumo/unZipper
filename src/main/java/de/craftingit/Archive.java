@@ -67,6 +67,7 @@ public class Archive {
 
     public void extract(String password) {
         File destFile;
+        this.status = "Wird entpackt...";
 
         try(SevenZFile file = new SevenZFile(new File(dir.toString()), password.getBytes(StandardCharsets.UTF_16LE))) {
             SevenZArchiveEntry entry = file.getNextEntry();

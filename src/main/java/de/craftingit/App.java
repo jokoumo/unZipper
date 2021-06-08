@@ -24,7 +24,6 @@ public class App extends Application {
 
         stage.setMinWidth(965);
         stage.setMinHeight(700);
-        //stage.onCloseRequestProperty();
     }
 
     static void setRoot(String fxml) throws IOException {

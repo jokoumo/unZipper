@@ -44,7 +44,7 @@
             <Font name="System Bold" size="12.0" />
          </font>
       </Label>
-      <CheckBox fx:id="checkBox_hideExtracted" layoutX="170.0" layoutY="165.0" mnemonicParsing="false" onAction="#hideExtracted" text="Entpackte Archive ausblenden." />
+      <CheckBox fx:id="checkBox_hideExtracted" layoutX="170.0" layoutY="165.0" mnemonicParsing="false" onAction="#hideExtracted" text="Entpackte Archive verbergen." />
       <MenuBar layoutY="2.0" prefHeight="25.0" prefWidth="950.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
         <menus>
           <Menu mnemonicParsing="false" text="Datei">
@@ -65,5 +65,7 @@
       <Button fx:id="button_cancelExtract" layoutX="15.0" layoutY="662.0" mnemonicParsing="false" onAction="#cancelExtract" text="Abbrechen" visible="false" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="15.0" />
       <Label fx:id="label_status" alignment="CENTER" contentDisplay="CENTER" layoutX="350.0" layoutY="671.0" prefHeight="17.0" prefWidth="250.0" textAlignment="JUSTIFY" AnchorPane.bottomAnchor="12.0" />
       <Label layoutX="696.0" layoutY="118.0" prefHeight="36.0" prefWidth="221.0" text="Achtung: Archive ohne Passwort, werden immer entpackt." wrapText="true" />
+      <Button fx:id="button_extractSingle" layoutX="118.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractSingle" text="Auswahl entpacken" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="118.0" />
+      <Button fx:id="button_multi" layoutX="254.0" layoutY="662.0" mnemonicParsing="false" onAction="#extractMulti" text="MultiTest" AnchorPane.bottomAnchor="13.0" AnchorPane.leftAnchor="254.0" />
    </children>
 </AnchorPane>

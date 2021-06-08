@@ -5,7 +5,7 @@
 + Passwordgeschützte .7z öffnen, PW übergeben und entpacken
 + Daten im aktuellen Verzeichnis entpacken
 + Exception bei falschem Password
-Option zum Abbrechen des Suchvorgangs/Entpackvorgangs
++ Option zum Abbrechen des Suchvorgangs/Entpackvorgangs
 + Auflisten aller gefundenen Dateien
 + Auflisten aller Dateien, die (nicht) erfolgreich entpackt wurden.
 + Umgang mit Zugriffsbeschränkung
@@ -23,9 +23,9 @@ Nur Tabellenauswahl entpacken oder alles entpacken (Button: "Entapcken" + " Alle
 Harter Abbruch Task(Suchvorgang+Entpcken)
 + Weicher Abbruch Entpacken, aktueller Vorgang wird noch beendet
 .zip und .rar (und andere Formate?) Unterstützung
-Warnung beim Beenden, wenn noch entpackt wird
++ Warnung beim Beenden, wenn noch gesucht/entpackt wird
 Optional: bereits entpackte Archive bei neuer Suche merken
-Layout skalierbar, wie verhalten sich die Elemente?
++ Layout skalierbar, wie verhalten sich die Elemente?
 Bisher nur als Windows App (wie sind die Pfade auf Linux, iOS...?)
 Variante, die mehrere Archive gleichzeitig entpackt -> Auswahl der maximalen Threads
 
@@ -34,10 +34,11 @@ Programm-Aufbau
 
 
 7-zip need for random access -> Speicherhungrig beim Entpacken + Zeitaufwändig(?)
+Entpacken über App deutlich langsamer als mit 7zip (Bei Dateien ab 200mb auffällig)
 
 
 
-
+Tobias Aßmann - IntelliJ Lizenz
 
 
 

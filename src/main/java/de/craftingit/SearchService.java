@@ -12,11 +12,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.Provider;
 
 public class SearchService extends Service<ObservableList<Archive>> {
-    private ObservableList<Archive> archives = FXCollections.observableArrayList();
-    private Path dir;
-    private String format;
-    private String filter;
-    private String exclude;
+    private final ObservableList<Archive> archives = FXCollections.observableArrayList();
+    private final Path dir;
+    private final String format;
+    private final String filter;
+    private final String exclude;
 
     SearchService(Path dir, String format, String filter, String exclude) {
         this.dir = dir;
@@ -29,7 +29,7 @@ public class SearchService extends Service<ObservableList<Archive>> {
     protected Task<ObservableList<Archive>> createTask() {
         return new Task<ObservableList<Archive>>() {
             @Override
-            protected ObservableList call() throws Exception {
+            protected ObservableList call() {
                 try {
                     Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                         @Override
