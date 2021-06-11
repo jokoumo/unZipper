@@ -1,8 +1,11 @@
 package de.craftingit;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.*;
+import java.util.Collections;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
@@ -10,23 +13,28 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.effect.ColorInput;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class C_Main {
+    private final double MIN_WINDOW_HEIGHT = 700;
+    private final double MIN_WINDOW_WIDTH = 965;
     private Stage stage = null;
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
     private Path dir;
-    private final int maxTasks = 6;
+    private final int MAX_TASKS = 6;
     private int countTasks;
     private int countArchives;
     private int countSucceededServices;
+    private int lastArchiveId;
     private double windowWidth;
     private SearchService searchService;
     private ExtractService extractService;
-    private ScheduledService<Boolean> extractTaskService;
 
     @FXML
     private AnchorPane anchorPane_main;
@@ -61,9 +69,13 @@ public class C_Main {
     @FXML
     private TextField textField_exclude;
     @FXML
+    private TextField textField_appDir;
+    @FXML
     private PasswordField pwField;
     @FXML
     private CheckBox checkBox_hideExtracted;
+    @FXML
+    private CheckBox checkBox_useExternalApp;
     @FXML
     private ProgressBar progressBar;
 
@@ -71,8 +83,10 @@ public class C_Main {
     private void initialize() {
         updateRoots();
 
+        textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
+
         choiceBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
-        for(int i = 1; i <= maxTasks; i++)
+        for(int i = 1; i <= MAX_TASKS; i++)
             choiceBox_tasks.getItems().add(i);
         choiceBox_tasks.setValue(1);
 
@@ -81,9 +95,9 @@ public class C_Main {
         //comboBox_formats.getItems().add(".rar");
         comboBox_formats.setValue(".7z");
 
-        tColumn_dir.setCellValueFactory(new PropertyValueFactory<>("dir"));
+        tColumn_dir.setCellValueFactory(new PropertyValueFactory<>("DIR"));
         tColumn_status.setCellValueFactory(new PropertyValueFactory<>("status"));
-        tColumn_id.setCellValueFactory(new PropertyValueFactory<>("id"));
+        tColumn_id.setCellValueFactory(new PropertyValueFactory<>("ID"));
 
         button_search.setDisable(false);
         button_cancelSearch.setVisible(false);
@@ -91,6 +105,10 @@ public class C_Main {
         button_extractSingle.setDisable(true);
         button_cancelExtract.setVisible(false);
         label_status.setVisible(false);
+
+//        Image iconOpenFolder = new Image(getClass().getResourceAsStream("images/openfolder_1.png"));
+//        ImageView iconOpenFolderView = new ImageView(iconOpenFolder);
+//        button_findArchivar.setGraphic(iconOpenFolderView);
 
         ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
             @Override
@@ -110,7 +128,7 @@ public class C_Main {
                                 windowWidth = stage.getWidth();
                                 progressBar.setLayoutX(windowWidth / 2 - progressBar.getWidth() / 2);
                                 label_status.setLayoutX(windowWidth / 2 - label_status.getWidth() / 2);
-                                tColumn_dir.setPrefWidth(tColumn_dir.getMinWidth() + windowWidth - 965);
+                                tColumn_dir.setPrefWidth(tColumn_dir.getMinWidth() + windowWidth - MIN_WINDOW_WIDTH);
                             }
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
@@ -142,10 +160,32 @@ public class C_Main {
     }
 
     @FXML
+    private void findArchivist() {
+        String appDir;
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("EXE","*.exe"));
+
+        try {
+            fileChooser.setInitialDirectory(new File(Path.of(textField_appDir.getText()).getParent().toString()));
+        } catch(NullPointerException e) {
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        }
+        appDir = new File(String.valueOf(fileChooser.showOpenDialog(stage))).getAbsolutePath();
+        if(!appDir.endsWith("null"))
+            textField_appDir.setText(appDir);
+
+        if(comboBox_formats.getValue().equals(".7z") && !textField_appDir.getText().endsWith("7z.exe")) {
+            textField_appDir.setStyle("-fx-text-fill: red;");
+        } else
+            textField_appDir.setStyle("-fx-text-fill: black;");
+    }
+
+    @FXML
     private void searchArchives() {
-        progressBar.setProgress(-1);
         Archive.setCountId(1);
         archives.clear();
+        lastArchiveId = 0;
+        progressBar.setProgress(-1);
         button_search.setVisible(false);
         button_cancelSearch.setVisible(true);
         label_status.setVisible(true);
@@ -188,7 +228,7 @@ public class C_Main {
     @FXML
     private void extractSingle() {
         Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
-        archive.extract(pwField.getText());
+        archive.extract7zIntern(pwField.getText());
         tableView_archives.refresh();
     }
 
@@ -205,16 +245,29 @@ public class C_Main {
         label_status.setVisible(true);
         label_status.setText("Entpacke...");
 
-        extractTaskService = new ScheduledService<Boolean>() {
+        ScheduledService<Boolean> extractTaskService = new ScheduledService<Boolean>() {
             @Override
             protected Task<Boolean> createTask() {
                 return new Task<Boolean>() {
                     @Override
                     protected Boolean call() {
-                        if(countArchives < 0 || countArchives >= archives.size()) {
+                        if(countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
+                            Platform.runLater(() -> {
+                                button_extractAll.setVisible(true);
+                                button_extractSingle.setVisible(true);
+                                button_cancelExtract.setVisible(false);
+                                button_search.setDisable(false);
+                                button_cancelExtract.setDisable(false);
+                                button_cancelExtract.setVisible(false);
+
+                                if (countArchives < 0) {
+                                    label_status.setText("Entpacken abgebrochen.");
+                                    progressBar.setProgress(0);
+                                } else
+                                    label_status.setText("Fertig!");
+                            });
                             this.cancel();
-                        } else
-                        if(countTasks < choiceBox_tasks.getValue()) {
+                        } else if(countTasks < choiceBox_tasks.getValue() ) {
                             extractAllStart(countArchives);
                             countTasks++;
                             countArchives++;
@@ -225,14 +278,15 @@ public class C_Main {
                 };
             }
         };
-        extractTaskService.setPeriod(Duration.millis(100));
+        extractTaskService.setPeriod(Duration.millis(50));
         extractTaskService.start();
     }
 
     @FXML
     private void extractAllStart(int index) {
         try {
-            extractService = new ExtractService(archives.get(index), pwField.getText());
+            extractService = new ExtractService(checkBox_useExternalApp.isSelected() ? textField_appDir.getText() : "",
+                                                archives.get(index), pwField.getText());
         } catch (IndexOutOfBoundsException e) {
             System.out.println(e.getMessage());
         }
@@ -250,23 +304,12 @@ public class C_Main {
             countSucceededServices++;
             tableView_archives.refresh();
 
-            if(index == (archives.size() -1)) {
-                button_extractAll.setVisible(true);
-                button_extractSingle.setVisible(true);
-                button_cancelExtract.setVisible(false);
-                button_search.setDisable(false);
-                button_cancelExtract.setDisable(false);
-                button_cancelExtract.setVisible(false);
-                label_status.setText("Fertig!");
-            }
-            if (countArchives < 0) {
-                label_status.setText("Entpacken abgebrochen.");
-                progressBar.setProgress(0);
-            } else
+            if (countArchives >= 0)
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
         });
         extractService.start();
     }
+
 
     @FXML
     private void hideExtracted() {

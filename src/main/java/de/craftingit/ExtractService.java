@@ -6,24 +6,39 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
-public class ExtractService extends Service<Boolean> {
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+public class ExtractService extends Service<Integer> {
+    private final String dirApp;
     private final Archive archive;
     private final String password;
 
     public ExtractService(Archive archive, String password) {
+        this.dirApp = "";
+        this.archive = archive;
+        this.password = password;
+    }
+
+    public ExtractService(String dirApp, Archive archive, String password) {
+        this.dirApp = dirApp;
         this.archive = archive;
         this.password = password;
     }
 
     @Override
-    protected Task<Boolean> createTask() {
-        return new Task<Boolean>() {
+    protected Task<Integer> createTask() {
+        return new Task<Integer>() {
             @Override
-            protected Boolean call() throws Exception {
+            protected Integer call() throws Exception {
                 if (!archive.isExtracted()) {
-                    archive.extract(password);
+                    if(dirApp.isEmpty()) {
+                        archive.extract7zIntern(password);  //intern Entpacken
+                    } else {
+                        archive.extract7zExtern(password, dirApp);   //extern mit 7z.exe entpacken
+                    }
                 }
-                return null;
+                return 0;
             }
         };
     }

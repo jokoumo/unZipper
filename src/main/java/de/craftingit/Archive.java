@@ -1,12 +1,9 @@
 package de.craftingit;
 
-import org.apache.commons.compress.PasswordRequiredException;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,21 +11,21 @@ import java.nio.file.Paths;
 
 public class Archive {
     private static int countId = 1;
-    private final int id;
-    private final Path dir;
+    private final int ID;
+    private final Path DIR;
     private String status;
     private boolean isExtracted = false;
 
     Archive(Path path) {
         path = Paths.get(path.toString().replace(".\\", ""));
-        this.dir = path;
+        this.DIR = path;
         this.status = "Verpackt";
-        this.id = countId;
+        this.ID = countId;
         countId++;
     }
 
-    public Path getDir() {
-        return dir;
+    public Path getDIR() {
+        return DIR;
     }
 
     public static int getCountId() {
@@ -39,8 +36,8 @@ public class Archive {
         Archive.countId = countId;
     }
 
-    public int getId() {
-        return id;
+    public int getID() {
+        return ID;
     }
 
     public String getStatus() {
@@ -52,7 +49,7 @@ public class Archive {
     }
 
     public String toString() {
-        return this.dir.toString();
+        return (this.ID + " : " + this.DIR.toString());
     }
 
     public boolean isExtracted() {
@@ -60,20 +57,20 @@ public class Archive {
     }
 
     public void print() {
-        System.out.println("ID: " + this.id);
-        System.out.println("Pfad: " + this.dir);
+        System.out.println("ID: " + this.ID);
+        System.out.println("Pfad: " + this.DIR);
         System.out.println("Status: " + this.status);
     }
 
-    public void extract(String password) {
+    public void extract7zIntern(String password) {
         File destFile;
         this.status = "Wird entpackt...";
 
-        try(SevenZFile file = new SevenZFile(new File(dir.toString()), password.getBytes(StandardCharsets.UTF_16LE))) {
+        try(SevenZFile file = new SevenZFile(new File(DIR.toString()), password.getBytes(StandardCharsets.UTF_16LE))) {
             SevenZArchiveEntry entry = file.getNextEntry();
 
             while (entry != null) {
-                destFile = new File(dir.getParent().toString(), entry.getName());
+                destFile = new File(DIR.getParent().toString(), entry.getName());
 
                 try (FileOutputStream out = new FileOutputStream(destFile)) {
                     byte[] content = new byte[(int) entry.getSize()];
@@ -95,6 +92,42 @@ public class Archive {
                 }
             }
         } catch(IOException e) {
+            this.status = "Passwort falsch oder Archiv beschädigt.";
+        }
+    }
+
+    public void extract7zExtern(String password, String dirApp) {
+        this.status = "Wird entpackt...";
+        try {
+            ProcessBuilder builder = new ProcessBuilder(
+                    "cmd.exe", "/c",
+                    "\"" + dirApp + "\" e \"" +
+                            this.getDIR() + "\" -p" +
+                            password + " -o\"" +
+                            this.getDIR().getParent() + "\\\" -aos");
+            System.out.println("\"" + dirApp + "\" e \"" +
+                    this.getDIR() + "\" -p" +
+                    password + " -o\"" +
+                    this.getDIR().getParent() + "\\\" -aos");
+            Process process = builder.start();
+            BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while (true) {
+                line = r.readLine();
+                if (line == null) {
+                    break;
+                }
+                System.out.println(line);
+            }
+            System.out.println("+++++ ERGEBNIS: " + process.exitValue());
+            if(process.exitValue() == 0) {
+                this.status = "Entpackt";
+                this.isExtracted = true;
+            }
+            else
+                this.status = "Passwort falsch oder Archiv beschädigt.";
+        } catch (IOException e) {
+            System.out.println("Fehler: " + e.getMessage());
             this.status = "Passwort falsch oder Archiv beschädigt.";
         }
     }

@@ -28,9 +28,10 @@ Optional: bereits entpackte Archive bei neuer Suche merken
 + Layout skalierbar, wie verhalten sich die Elemente?
 Bisher nur als Windows App (wie sind die Pfade auf Linux, iOS...?)
 Variante, die mehrere Archive gleichzeitig entpackt -> Auswahl der maximalen Threads
+Dateien über 7zip entpacken, API über Kommandozeile
 
 
-
+C:\Program Files\7-Zip\7z.exe
 
 
 7-zip need for random access -> Speicherhungrig beim Entpacken + Zeitaufwändig(?)
