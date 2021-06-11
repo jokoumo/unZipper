@@ -9,6 +9,18 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
+
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/users/jokoumo/projects/1</url>
+    </issueManagement>
+
+    <scm>
+        <url>git@github.com:jokoumo/unZipper.git</url>
+        <developerConnection>git@github.com:jokoumo/unZipper.git</developerConnection>
+        <connection>git@github.com:jokoumo/unZipper.git</connection>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.openjfx</groupId>
