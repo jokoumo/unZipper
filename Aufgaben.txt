@@ -55,3 +55,22 @@ Apache Commons Compress Maven:
   <artifactId>xz</artifactId>
   <version>1.8</version>
 </dependency>
+
+
+if((countArchives < 0 || countArchives >= archives.size())) {
+                            System.out.println("Eins");
+                            this.cancel();
+                            button_extractAll.setVisible(true);
+                            button_extractSingle.setVisible(true);
+                            button_cancelExtract.setVisible(false);
+                            button_search.setDisable(false);
+                            button_cancelExtract.setDisable(false);
+                            button_cancelExtract.setVisible(false);
+                            label_status.setText("Fertig!");
+                        } else if(countTasks < choiceBox_tasks.getValue()) {
+                            System.out.println("Zwei");
+                            extractAllStart(countArchives);
+                            countTasks++;
+                            countArchives++;
+                            tableView_archives.refresh();
+                        }

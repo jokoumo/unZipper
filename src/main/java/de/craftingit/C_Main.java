@@ -1,9 +1,7 @@
 package de.craftingit;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.*;
-import java.util.Collections;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -13,9 +11,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.effect.ColorInput;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -48,6 +44,10 @@ public class C_Main {
     private Button button_extractSingle;
     @FXML
     private Button button_cancelExtract;
+    @FXML
+    private Button button_updateRoots;
+    @FXML
+    private Button button_findArchivist;
     @FXML
     private Label label_status;
     @FXML
@@ -140,6 +140,15 @@ public class C_Main {
         };
         backgroundService.setPeriod(Duration.millis(50));
         backgroundService.start();
+
+        // Wenn kein MS Windows verwendet wird
+        if(!System.getProperty("os.name").toLowerCase().startsWith("windows")) {
+            comboBox_roots.setDisable(true);
+            textField_appDir.setDisable(true);
+            button_updateRoots.setDisable(true);
+            button_findArchivist.setDisable(true);
+            textField_appDir.setText("Installation von \"p7zip-full\" benötigt");
+        }
     }
 
     @FXML
@@ -228,8 +237,37 @@ public class C_Main {
     @FXML
     private void extractSingle() {
         Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
-        archive.extract7zIntern(pwField.getText());
+        countTasks++;
+        progressBar.setProgress(-1);
+        extractStart(archive.getID() -1);
+        setGuiWhenExtracting();
         tableView_archives.refresh();
+    }
+
+    @FXML
+    private void setGuiWhenExtracting() {
+        if(countTasks > 0) {
+            button_extractAll.setVisible(false);
+            button_extractSingle.setVisible(false);
+            button_cancelExtract.setVisible(true);
+            button_search.setDisable(true);
+            label_status.setVisible(true);
+            label_status.setText("Entpacke...");
+        } else {
+            button_extractAll.setVisible(true);
+            button_extractSingle.setVisible(true);
+            button_cancelExtract.setVisible(false);
+            button_search.setDisable(false);
+            button_cancelExtract.setDisable(false);
+            button_cancelExtract.setVisible(false);
+
+            if (countArchives < 0) {
+                label_status.setText("Entpacken abgebrochen.");
+                progressBar.setProgress(0);
+                countArchives = 0;
+            } else
+                label_status.setText("Fertig!");
+        }
     }
 
     @FXML
@@ -238,12 +276,6 @@ public class C_Main {
         countArchives = 0;
         countTasks = 0;
         progressBar.setProgress(0);
-        button_extractAll.setVisible(false);
-        button_extractSingle.setVisible(false);
-        button_cancelExtract.setVisible(true);
-        button_search.setDisable(true);
-        label_status.setVisible(true);
-        label_status.setText("Entpacke...");
 
         ScheduledService<Boolean> extractTaskService = new ScheduledService<Boolean>() {
             @Override
@@ -252,23 +284,10 @@ public class C_Main {
                     @Override
                     protected Boolean call() {
                         if(countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
-                            Platform.runLater(() -> {
-                                button_extractAll.setVisible(true);
-                                button_extractSingle.setVisible(true);
-                                button_cancelExtract.setVisible(false);
-                                button_search.setDisable(false);
-                                button_cancelExtract.setDisable(false);
-                                button_cancelExtract.setVisible(false);
-
-                                if (countArchives < 0) {
-                                    label_status.setText("Entpacken abgebrochen.");
-                                    progressBar.setProgress(0);
-                                } else
-                                    label_status.setText("Fertig!");
-                            });
+                            Platform.runLater(C_Main.this::setGuiWhenExtracting);
                             this.cancel();
                         } else if(countTasks < choiceBox_tasks.getValue() ) {
-                            extractAllStart(countArchives);
+                            extractStart(countArchives);
                             countTasks++;
                             countArchives++;
                             tableView_archives.refresh();
@@ -283,7 +302,7 @@ public class C_Main {
     }
 
     @FXML
-    private void extractAllStart(int index) {
+    private void extractStart(int index) {
         try {
             extractService = new ExtractService(checkBox_useExternalApp.isSelected() ? textField_appDir.getText() : "",
                                                 archives.get(index), pwField.getText());
@@ -304,8 +323,12 @@ public class C_Main {
             countSucceededServices++;
             tableView_archives.refresh();
 
-            if (countArchives >= 0)
+            if (countArchives >= 0 && progressBar.getProgress() >= 0)
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
+            else {
+                progressBar.setProgress(1);
+                setGuiWhenExtracting();
+            }
         });
         extractService.start();
     }

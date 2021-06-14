@@ -56,79 +56,13 @@ public class Archive {
         return isExtracted;
     }
 
+    public void setExtracted(boolean extracted) {
+        isExtracted = extracted;
+    }
+
     public void print() {
         System.out.println("ID: " + this.ID);
         System.out.println("Pfad: " + this.DIR);
         System.out.println("Status: " + this.status);
-    }
-
-    public void extract7zIntern(String password) {
-        File destFile;
-        this.status = "Wird entpackt...";
-
-        try(SevenZFile file = new SevenZFile(new File(DIR.toString()), password.getBytes(StandardCharsets.UTF_16LE))) {
-            SevenZArchiveEntry entry = file.getNextEntry();
-
-            while (entry != null) {
-                destFile = new File(DIR.getParent().toString(), entry.getName());
-
-                try (FileOutputStream out = new FileOutputStream(destFile)) {
-                    byte[] content = new byte[(int) entry.getSize()];
-                    file.read(content, 0, content.length);
-                    out.write(content);
-                    this.status = "Entpackt";
-                    this.isExtracted = true;
-                } catch (Exception ex) {
-                    this.status = "Passwort falsch oder Archiv beschädigt.";
-                    break;
-                } finally {
-                    try {
-                        if (Files.size(destFile.toPath()) == 0)
-                            Files.delete(destFile.toPath());
-                    } catch(Exception exDel) {
-                        System.out.println("Keine Datei gelöscht: " + exDel.getMessage());
-                    }
-                    entry = file.getNextEntry();
-                }
-            }
-        } catch(IOException e) {
-            this.status = "Passwort falsch oder Archiv beschädigt.";
-        }
-    }
-
-    public void extract7zExtern(String password, String dirApp) {
-        this.status = "Wird entpackt...";
-        try {
-            ProcessBuilder builder = new ProcessBuilder(
-                    "cmd.exe", "/c",
-                    "\"" + dirApp + "\" e \"" +
-                            this.getDIR() + "\" -p" +
-                            password + " -o\"" +
-                            this.getDIR().getParent() + "\\\" -aos");
-            System.out.println("\"" + dirApp + "\" e \"" +
-                    this.getDIR() + "\" -p" +
-                    password + " -o\"" +
-                    this.getDIR().getParent() + "\\\" -aos");
-            Process process = builder.start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while (true) {
-                line = r.readLine();
-                if (line == null) {
-                    break;
-                }
-                System.out.println(line);
-            }
-            System.out.println("+++++ ERGEBNIS: " + process.exitValue());
-            if(process.exitValue() == 0) {
-                this.status = "Entpackt";
-                this.isExtracted = true;
-            }
-            else
-                this.status = "Passwort falsch oder Archiv beschädigt.";
-        } catch (IOException e) {
-            System.out.println("Fehler: " + e.getMessage());
-            this.status = "Passwort falsch oder Archiv beschädigt.";
-        }
     }
 }

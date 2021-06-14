@@ -29,7 +29,7 @@ public class SearchService extends Service<ObservableList<Archive>> {
     protected Task<ObservableList<Archive>> createTask() {
         return new Task<ObservableList<Archive>>() {
             @Override
-            protected ObservableList call() {
+            protected ObservableList<Archive> call() {
                 try {
                     Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                         @Override
