@@ -18,6 +18,7 @@ public class Archive {
 
     Archive(Path path) {
         path = Paths.get(path.toString().replace(".\\", ""));
+        path = Paths.get(path.toString().replace("./", ""));
         this.DIR = path;
         this.status = "Verpackt";
         this.ID = countId;

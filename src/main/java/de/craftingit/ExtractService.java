@@ -10,15 +10,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class ExtractService extends Service<Integer> {
-    private final static boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
-    private final String dirApp;
-    private final Archive archive;
-    private final String password;
+    private final static boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
+    private final boolean EXEC_EXTERN;
+    private final String DIR_APP;
+    private final Archive ARCHIVE;
+    private final String PASSWORD;
 
-    public ExtractService(String dirApp, Archive archive, String password) {
-        this.dirApp = dirApp;
-        this.archive = archive;
-        this.password = password;
+    public ExtractService(boolean execExtern, String dirApp, Archive archive, String password) {
+        this.EXEC_EXTERN = execExtern;
+        this.DIR_APP = dirApp;
+        this.ARCHIVE = archive;
+        this.PASSWORD = password;
     }
 
     @Override
@@ -26,11 +28,11 @@ public class ExtractService extends Service<Integer> {
         return new Task<Integer>() {
             @Override
             protected Integer call() throws Exception {
-                if (!archive.isExtracted()) {
-                    if(dirApp.isEmpty() && isWindows) {
-                        extract7zIntern();  //intern Entpacken
-                    } else {
+                if (!ARCHIVE.isExtracted()) {
+                    if(EXEC_EXTERN) {
                         extract7zExtern();  //extern mit 7z.exe entpacken
+                    } else {
+                        extract7zIntern();  //intern Entpacken
                     }
                 }
                 return 0;
@@ -40,22 +42,22 @@ public class ExtractService extends Service<Integer> {
 
     public void extract7zIntern() {
         File destFile;
-        archive.setStatus("Wird entpackt...");
+        ARCHIVE.setStatus("Wird entpackt...");
 
-        try(SevenZFile file = new SevenZFile(new File(archive.getDIR().toString()), password.getBytes(StandardCharsets.UTF_16LE))) {
+        try(SevenZFile file = new SevenZFile(new File(ARCHIVE.getDIR().toString()), PASSWORD.getBytes(StandardCharsets.UTF_16LE))) {
             SevenZArchiveEntry entry = file.getNextEntry();
 
             while (entry != null) {
-                destFile = new File(archive.getDIR().getParent().toString(), entry.getName());
+                destFile = new File(ARCHIVE.getDIR().getParent().toString(), entry.getName());
 
                 try (FileOutputStream out = new FileOutputStream(destFile)) {
                     byte[] content = new byte[(int) entry.getSize()];
                     file.read(content, 0, content.length);
                     out.write(content);
-                    archive.setStatus("Entpackt");
-                    archive.setExtracted(true);
+                    ARCHIVE.setStatus("Entpackt");
+                    ARCHIVE.setExtracted(true);
                 } catch (Exception ex) {
-                    archive.setStatus("Passwort falsch oder Archiv beschädigt.");
+                    ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
                     break;
                 } finally {
                     try {
@@ -68,29 +70,29 @@ public class ExtractService extends Service<Integer> {
                 }
             }
         } catch(IOException e) {
-            archive.setStatus("Passwort falsch oder Archiv beschädigt.");
+            ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
         }
     }
 
     public void extract7zExtern() {
-        archive.setStatus("Wird entpackt...");
+        ARCHIVE.setStatus("Wird entpackt...");
         ProcessBuilder builder;
         try {
-            if(isWindows) {
+            if(IS_WINDOWS) {
                 builder = new ProcessBuilder(
-                        "cmd.exe", "/c",
-                        "\"" + dirApp + "\" e \"" +                             //Pfad der 7z.exe + (e)xtract-Anweisung
-                                archive.getDIR() + "\" -p" +                    //Pfad des Archivs + (-p)assword Switch
-                                password + " -o\"" +                            //Passwort + (-o)Zielverzeichnis
-                                archive.getDIR().getParent() + "\\\" -aos");    //Pfad Zielverzeichnis + (-aos)Nichts überschreiben, sondern überspringen
+                "cmd.exe", "/c",
+                        "\"" + DIR_APP + "\" e \"" +                    //Pfad der 7z.exe + (e)xtract-Anweisung
+                        ARCHIVE.getDIR() + "\" -p" +                    //Pfad des Archivs + (-p)assword Switch
+                        PASSWORD + " -o\"" +                            //Passwort + (-o)Zielverzeichnis
+                        ARCHIVE.getDIR().getParent() + "\\\" -aos");    //Pfad Zielverzeichnis + (-aos)Nichts überschreiben, sondern überspringen
             } else {
                 builder = new ProcessBuilder(
-                        "7z e \"" +                                   //Anwendung aufrufen + (e)xtract-Anweisung
-                                archive.getDIR() + "\" -p" +                    //Pfad des Archivs + (-p)assword Switch
-                                password + " -o\"" +                            //Passwort + (-o)Zielverzeichnis
-                                archive.getDIR().getParent() + "\\\" -aos");    //Pfad Zielverzeichnis + (-aos)Nichts überschreiben, sondern überspringen
+                "7z", "e",
+                        ARCHIVE.getDIR().toString(),
+                        "-p" + PASSWORD,
+                        "-o" + ARCHIVE.getDIR().getParent().toString(),
+                        "-aos");
             }
-
             Process process = builder.start();
             BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
@@ -103,14 +105,14 @@ public class ExtractService extends Service<Integer> {
             }
             System.out.println("+++++ ERGEBNIS: " + process.exitValue());
             if(process.exitValue() == 0) {
-                archive.setStatus("Entpackt");
-                archive.setExtracted(true);
+                ARCHIVE.setStatus("Entpackt");
+                ARCHIVE.setExtracted(true);
             }
             else
-                archive.setStatus("Passwort falsch oder Archiv beschädigt.");
+                ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
         } catch (IOException e) {
             System.out.println("Fehler: " + e.getMessage());
-            archive.setStatus("Passwort falsch oder Archiv beschädigt.");
+            ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
         }
     }
 }

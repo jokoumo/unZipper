@@ -29,6 +29,7 @@ public class C_Main {
     private int countSucceededServices;
     private int lastArchiveId;
     private double windowWidth;
+    private boolean isExtracting;
     private SearchService searchService;
     private ExtractService extractService;
 
@@ -92,7 +93,6 @@ public class C_Main {
 
         comboBox_formats.getItems().add(".7z");
         //comboBox_formats.getItems().add(".zip");
-        //comboBox_formats.getItems().add(".rar");
         comboBox_formats.setValue(".7z");
 
         tColumn_dir.setCellValueFactory(new PropertyValueFactory<>("DIR"));
@@ -105,10 +105,6 @@ public class C_Main {
         button_extractSingle.setDisable(true);
         button_cancelExtract.setVisible(false);
         label_status.setVisible(false);
-
-//        Image iconOpenFolder = new Image(getClass().getResourceAsStream("images/openfolder_1.png"));
-//        ImageView iconOpenFolderView = new ImageView(iconOpenFolder);
-//        button_findArchivar.setGraphic(iconOpenFolderView);
 
         ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
             @Override
@@ -164,8 +160,10 @@ public class C_Main {
 
     @FXML
     private void changeDir() {
-        dir = Paths.get(comboBox_roots.getValue() + ".");
-        //System.out.println(dir);
+        if(System.getProperty("os.name").toLowerCase().startsWith("windows"))
+            dir = Paths.get(comboBox_roots.getValue() + ".");
+        else
+            dir = Paths.get(comboBox_roots.getValue());
     }
 
     @FXML
@@ -226,27 +224,8 @@ public class C_Main {
     }
 
     @FXML
-    private void cancelExtract() {
-        countArchives = -10;
-        button_cancelExtract.setDisable(true);
-        label_status.setVisible(true);
-        label_status.setText("Vorgang wird abgebrochen. Bitte warten.");
-        progressBar.setProgress(-1);
-    }
-
-    @FXML
-    private void extractSingle() {
-        Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
-        countTasks++;
-        progressBar.setProgress(-1);
-        extractStart(archive.getID() -1);
-        setGuiWhenExtracting();
-        tableView_archives.refresh();
-    }
-
-    @FXML
     private void setGuiWhenExtracting() {
-        if(countTasks > 0) {
+        if(isExtracting) {
             button_extractAll.setVisible(false);
             button_extractSingle.setVisible(false);
             button_cancelExtract.setVisible(true);
@@ -262,20 +241,42 @@ public class C_Main {
             button_cancelExtract.setVisible(false);
 
             if (countArchives < 0) {
-                label_status.setText("Entpacken abgebrochen.");
+                label_status.setText(countArchives == -1 ? "Kein Archiv ausgewählt.":"Entpacken abgebrochen.");
                 progressBar.setProgress(0);
-                countArchives = 0;
-            } else
+            } else {
                 label_status.setText("Fertig!");
+                progressBar.setProgress(1);
+            }
+        }
+    }
+
+    @FXML
+    private void extractSingle() {
+        countArchives = 0;
+        try {
+            Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
+            isExtracting = true;
+            countTasks++;
+            progressBar.setProgress(-1);
+            extractStart(archive.getID() -1);
+            setGuiWhenExtracting();
+            tableView_archives.refresh();
+        } catch (Exception e) {
+            isExtracting = false;
+            countArchives = -1;
+            setGuiWhenExtracting();
+            System.out.println("Fehler: " + "Kein Archiv ausgewählt");
         }
     }
 
     @FXML
     private void extractAll() {
+        isExtracting = true;
         countSucceededServices = 0;
         countArchives = 0;
         countTasks = 0;
         progressBar.setProgress(0);
+        setGuiWhenExtracting();
 
         ScheduledService<Boolean> extractTaskService = new ScheduledService<Boolean>() {
             @Override
@@ -284,9 +285,10 @@ public class C_Main {
                     @Override
                     protected Boolean call() {
                         if(countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
-                            Platform.runLater(C_Main.this::setGuiWhenExtracting);
+                            isExtracting = false;
                             this.cancel();
-                        } else if(countTasks < choiceBox_tasks.getValue() ) {
+                            Platform.runLater(C_Main.this::setGuiWhenExtracting);
+                        } else if(countTasks < choiceBox_tasks.getValue() && !(countArchives < 0 || countArchives >= archives.size())) {
                             extractStart(countArchives);
                             countTasks++;
                             countArchives++;
@@ -304,7 +306,7 @@ public class C_Main {
     @FXML
     private void extractStart(int index) {
         try {
-            extractService = new ExtractService(checkBox_useExternalApp.isSelected() ? textField_appDir.getText() : "",
+            extractService = new ExtractService(checkBox_useExternalApp.isSelected(), textField_appDir.getText(),
                                                 archives.get(index), pwField.getText());
         } catch (IndexOutOfBoundsException e) {
             System.out.println(e.getMessage());
@@ -326,13 +328,20 @@ public class C_Main {
             if (countArchives >= 0 && progressBar.getProgress() >= 0)
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
             else {
-                progressBar.setProgress(1);
+                isExtracting = false;
                 setGuiWhenExtracting();
             }
         });
         extractService.start();
     }
 
+    @FXML
+    private void cancelExtract() {
+        countArchives = -10;
+        button_cancelExtract.setDisable(true);
+        label_status.setText("Vorgang wird abgebrochen. Bitte warten.");
+        progressBar.setProgress(-1);
+    }
 
     @FXML
     private void hideExtracted() {
@@ -377,7 +386,7 @@ public class C_Main {
 
         if(searchService != null && searchService.isRunning()) {
             alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?");
-        } else if(extractService != null && extractService.isRunning()) {
+        } else if(isExtracting) {
             alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\nEs kann zu einem Datenverlust kommen.");
         } else {
             stage.close();
