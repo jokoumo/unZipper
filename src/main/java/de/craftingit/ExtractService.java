@@ -96,9 +96,9 @@ public class ExtractService extends Service<Integer> {
             Process process = builder.start();
             BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
-            while (true) {
+            while(true) {
                 line = r.readLine();
-                if (line == null) {
+                if(line == null) {
                     break;
                 }
                 System.out.println(line);

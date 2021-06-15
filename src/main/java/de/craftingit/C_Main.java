@@ -50,6 +50,8 @@ public class C_Main {
     @FXML
     private Button button_findArchivist;
     @FXML
+    private TextField textField_rootAppend;
+    @FXML
     private Label label_status;
     @FXML
     private ComboBox<String> comboBox_roots;
@@ -155,15 +157,14 @@ public class C_Main {
             comboBox_roots.getItems().add(root.toString());
         }
         comboBox_roots.setValue(roots[0].toString());
-        changeDir();
     }
 
     @FXML
     private void changeDir() {
         if(System.getProperty("os.name").toLowerCase().startsWith("windows"))
-            dir = Paths.get(comboBox_roots.getValue() + ".");
+            dir = Paths.get(comboBox_roots.getValue() + (textField_rootAppend.getText().isEmpty() ? "." : textField_rootAppend.getText()));
         else
-            dir = Paths.get(comboBox_roots.getValue());
+            dir = Paths.get(comboBox_roots.getValue() + textField_rootAppend.getText());
     }
 
     @FXML
@@ -189,6 +190,7 @@ public class C_Main {
 
     @FXML
     private void searchArchives() {
+        changeDir();
         Archive.setCountId(1);
         archives.clear();
         lastArchiveId = 0;
@@ -197,6 +199,8 @@ public class C_Main {
         button_cancelSearch.setVisible(true);
         label_status.setVisible(true);
         label_status.setText("Suche läuft...");
+
+        System.out.println(dir);
 
         searchService = new SearchService(dir, comboBox_formats.getValue(),
                 textField_filter.getText(), textField_exclude.getText());

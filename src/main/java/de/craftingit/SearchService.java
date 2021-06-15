@@ -6,6 +6,7 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -32,6 +33,12 @@ public class SearchService extends Service<ObservableList<Archive>> {
             protected ObservableList<Archive> call() {
                 try {
                     Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+
+//                        @Override
+//                        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+//                            return FileVisitResult.SKIP_SUBTREE;
+//                        }
+
                         @Override
                         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                             if(file.toString().endsWith(format) && !(file.toString().contains("$RECYCLE") || file.toString().contains("Trash/files"))) {
@@ -48,6 +55,10 @@ public class SearchService extends Service<ObservableList<Archive>> {
                         @Override
                         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
                             if(exc instanceof AccessDeniedException)
+                                return FileVisitResult.SKIP_SUBTREE;
+                            if(exc instanceof FileSystemException)
+                                return FileVisitResult.SKIP_SUBTREE;
+                            if(exc instanceof FileNotFoundException)
                                 return FileVisitResult.SKIP_SUBTREE;
                             return super.visitFileFailed(file, exc);
                         }
