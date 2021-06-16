@@ -200,8 +200,6 @@ public class C_Main {
         label_status.setVisible(true);
         label_status.setText("Suche läuft...");
 
-        System.out.println(dir);
-
         searchService = new SearchService(dir, comboBox_formats.getValue(),
                 textField_filter.getText(), textField_exclude.getText());
 
