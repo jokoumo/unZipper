@@ -1,6 +1,9 @@
 package de.craftingit;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.*;
 
 import javafx.application.Platform;
@@ -12,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -50,7 +54,7 @@ public class C_Main {
     @FXML
     private Button button_findArchivist;
     @FXML
-    private TextField textField_rootAppend;
+    private TextField textField_rootAddition;
     @FXML
     private Label label_status;
     @FXML
@@ -78,6 +82,8 @@ public class C_Main {
     @FXML
     private CheckBox checkBox_hideExtracted;
     @FXML
+    private CheckBox checkBox_deleteExtracted;
+    @FXML
     private CheckBox checkBox_useExternalApp;
     @FXML
     private ProgressBar progressBar;
@@ -93,7 +99,12 @@ public class C_Main {
             choiceBox_tasks.getItems().add(i);
         choiceBox_tasks.setValue(1);
 
+        textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. \"Benutzer\\Default\". Andere z.B. \"home/usr\""));
+
         comboBox_formats.getItems().add(".7z");
+        //comboBox_formats.getItems().add(".iso");
+        //comboBox_formats.getItems().add(".rar");
+        //comboBox_formats.getItems().add(".tar");
         //comboBox_formats.getItems().add(".zip");
         comboBox_formats.setValue(".7z");
 
@@ -162,30 +173,55 @@ public class C_Main {
     @FXML
     private void changeDir() {
         if(System.getProperty("os.name").toLowerCase().startsWith("windows"))
-            dir = Paths.get(comboBox_roots.getValue() + (textField_rootAppend.getText().isEmpty() ? "." : textField_rootAppend.getText()));
+            dir = Paths.get(comboBox_roots.getValue() + (textField_rootAddition.getText().isEmpty() ? "." : textField_rootAddition.getText()));
         else
-            dir = Paths.get(comboBox_roots.getValue() + textField_rootAppend.getText());
+            dir = Paths.get(comboBox_roots.getValue() + textField_rootAddition.getText());
+    }
+
+    @FXML
+    private void findRootAddition() {
+        try {
+            String dir = new DirectoryChooser().showDialog(stage).toString();
+            for(File root : roots) {
+                if(dir.contains(root.toString()))
+                    comboBox_roots.setValue(root.toString());
+                dir = dir.replace(root.toString(), "");
+            }
+            textField_rootAddition.setText(dir);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
     }
 
     @FXML
     private void findArchivist() {
-        String appDir;
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("EXE","*.exe"));
+        String dir;
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("EXE Dateien","*.exe"));
 
         try {
-            fileChooser.setInitialDirectory(new File(Path.of(textField_appDir.getText()).getParent().toString()));
+            chooser.setInitialDirectory(new File(Path.of(textField_appDir.getText()).getParent().toString()));
         } catch(NullPointerException e) {
-            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+            chooser.setInitialDirectory(new File(System.getProperty("user.home")));
         }
-        appDir = new File(String.valueOf(fileChooser.showOpenDialog(stage))).getAbsolutePath();
-        if(!appDir.endsWith("null"))
-            textField_appDir.setText(appDir);
+        dir = new File(String.valueOf(chooser.showOpenDialog(stage))).getAbsolutePath();
+        if(!dir.endsWith("null"))
+            textField_appDir.setText(dir);
 
         if(comboBox_formats.getValue().equals(".7z") && !textField_appDir.getText().endsWith("7z.exe")) {
             textField_appDir.setStyle("-fx-text-fill: red;");
         } else
             textField_appDir.setStyle("-fx-text-fill: black;");
+    }
+
+    @FXML
+    private void deleteExtractedWarning() {
+        if(checkBox_deleteExtracted.isSelected()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Achtung!");
+            alert.setHeaderText("Damit werden alle entpackten Archive unwiderruflich gelöscht!");
+            alert.show();
+        }
     }
 
     @FXML
@@ -223,6 +259,48 @@ public class C_Main {
         button_search.setVisible(true);
         button_cancelSearch.setVisible(false);
         label_status.setText("Suche abgebrochen.");
+    }
+
+    @FXML
+    private void exportTable() {
+//        String dir;
+//        File file;
+//        BufferedWriter writer = null;
+//        FileChooser chooser = new FileChooser();
+//        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Datei","*.csv"));
+//        chooser.setInitialDirectory(new File(System.getProperty("user.home")));
+//
+//        try {
+//            dir = chooser.showSaveDialog(stage).toString();
+//
+//            try {
+//                String data;
+//                file = Files.createFile(Path.of(dir)).toFile();
+//                writer = new BufferedWriter(new FileWriter(file));
+//                for(Archive archive : archives) {
+//                    data = (archive.getID() + 1) + ";" + archive.getDIR() + ";" + archive.getStatus() + "\n";
+//                    writer.write(data);
+//                }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            } finally {
+//                assert writer != null;
+//                writer.flush();
+//                writer.close();
+//            }
+//        } catch (NullPointerException | IOException e) {
+//            e.printStackTrace();
+//        }
+        ExportData exportData = new ExportData(archives, stage);
+        exportData.setOnSucceeded(workerStateEvent -> {
+            System.out.println(exportData.getValue());
+        });
+        exportData.start();
+    }
+
+    @FXML
+    private  void importTable() {
+
     }
 
     @FXML
@@ -327,6 +405,14 @@ public class C_Main {
             countSucceededServices++;
             tableView_archives.refresh();
 
+            if(archives.get(index).isExtracted() && checkBox_deleteExtracted.isSelected()) {
+                try {
+                    Files.deleteIfExists(archives.get(index).getDIR());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
             if (countArchives >= 0 && progressBar.getProgress() >= 0)
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
             else {
@@ -334,6 +420,13 @@ public class C_Main {
                 setGuiWhenExtracting();
             }
         });
+
+        extractService.setOnFailed(workerStateEvent -> {
+            System.err.println("ExtractService failed. Nummer: " + (index +1));
+            countTasks--;
+            tableView_archives.refresh();
+        });
+
         extractService.start();
     }
 

@@ -10,6 +10,7 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
@@ -19,7 +20,7 @@
 
 <AnchorPane fx:id="anchorPane_main" onDragDone="#searchArchives" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.craftingit.C_Main">
    <children>
-      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="148.0" layoutX="15.0" layoutY="33.0" stroke="#909090" strokeType="INSIDE" width="440.0" />
+      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="171.0" layoutX="15.0" layoutY="32.0" stroke="#909090" strokeType="INSIDE" width="440.0" />
       <Label layoutX="24.0" layoutY="36.0" text="Partition">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
@@ -29,12 +30,12 @@
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
       <ComboBox fx:id="comboBox_roots" layoutX="24.0" layoutY="53.0" prefHeight="25.0" prefWidth="84.0" />
-      <Button fx:id="button_search" layoutX="14.0" layoutY="201.0" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#searchArchives" prefHeight="25.0" prefWidth="74.0" text="Suchen">
+      <Button fx:id="button_search" layoutX="14.0" layoutY="214.0" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#searchArchives" prefHeight="25.0" prefWidth="74.0" text="Suchen">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
-      <ComboBox fx:id="comboBox_formats" layoutX="24.0" layoutY="100.0" prefHeight="25.0" prefWidth="84.0" />
-      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="148.0" layoutX="463.0" layoutY="32.0" stroke="#909090" strokeType="INSIDE" width="470.0" />
+      <ComboBox fx:id="comboBox_formats" layoutX="24.0" layoutY="111.0" prefHeight="25.0" prefWidth="84.0" />
+      <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="171.0" layoutX="463.0" layoutY="32.0" stroke="#909090" strokeType="INSIDE" width="470.0" />
       <TextField fx:id="textField_filter" layoutX="473.0" layoutY="81.0" maxWidth="200.0" prefHeight="25.0" prefWidth="200.0">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
@@ -59,23 +60,23 @@
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <TableView fx:id="tableView_archives" layoutX="14.0" layoutY="232.0" prefHeight="406.0" prefWidth="919.0" AnchorPane.bottomAnchor="62.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="17.0" AnchorPane.topAnchor="232.0">
+      <TableView fx:id="tableView_archives" layoutX="14.0" layoutY="244.0" prefHeight="394.0" prefWidth="919.0" AnchorPane.bottomAnchor="62.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="17.0" AnchorPane.topAnchor="244.0">
         <columns>
             <TableColumn fx:id="tColumn_id" minWidth="83.0" prefWidth="83.0" text="Nummer" />
           <TableColumn fx:id="tColumn_dir" minWidth="610.0" prefWidth="610.0" text="Dateipfad" />
           <TableColumn fx:id="tColumn_status" minWidth="225.0" prefWidth="225.0" text="Status" />
         </columns>
       </TableView>
-      <Label layoutX="24.0" layoutY="83.0" text="Format">
+      <Label layoutX="24.0" layoutY="94.0" text="Format">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <Label layoutX="473.0" layoutY="36.0" text="Optional">
+      <Label layoutX="473.0" layoutY="36.0" text="Erweiterte Optionen">
          <font>
             <Font name="SansSerif Bold" size="12.0" />
          </font>
       </Label>
-      <CheckBox fx:id="checkBox_hideExtracted" layoutX="114.0" layoutY="205.0" mnemonicParsing="false" onAction="#hideExtracted" text="Entpackte Archive verbergen.">
+      <CheckBox fx:id="checkBox_hideExtracted" layoutX="473.0" layoutY="173.0" maxWidth="200.0" minWidth="200.0" mnemonicParsing="false" onAction="#hideExtracted" prefHeight="16.0" prefWidth="200.0" text="Entpackte Archive verbergen.">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></CheckBox>
@@ -83,12 +84,15 @@
         <menus>
           <Menu mnemonicParsing="false" text="Datei">
             <items>
-              <MenuItem fx:id="menuItem_close" mnemonicParsing="false" onAction="#closeApp" text="Beenden" />
+              <MenuItem fx:id="menuItem_exportTable" mnemonicParsing="false" onAction="#exportTable" text="Exportieren" />
+                  <MenuItem fx:id="menuItem_importTable" mnemonicParsing="false" onAction="#importTable" text="Importieren" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+                  <MenuItem fx:id="menuItem_close2" mnemonicParsing="false" onAction="#closeApp" text="Beenden" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Hilfe">
             <items>
-              <MenuItem fx:id="menuItem_info" mnemonicParsing="false" onAction="#showAppInfo" text="Information" />
+              <MenuItem fx:id="menuItem_about" mnemonicParsing="false" onAction="#showAppInfo" text="Über" />
             </items>
           </Menu>
         </menus>
@@ -98,7 +102,7 @@
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
       <ProgressBar fx:id="progressBar" layoutX="350.0" layoutY="642.0" maxHeight="-Infinity" maxWidth="250.0" minHeight="-Infinity" minWidth="250.0" prefHeight="18.0" prefWidth="250.0" progress="0.0" AnchorPane.bottomAnchor="40.0" />
-      <Button fx:id="button_cancelSearch" layoutX="14.0" layoutY="201.0" mnemonicParsing="false" onAction="#cancelSearch" text="Abbrechen" visible="false">
+      <Button fx:id="button_cancelSearch" layoutX="14.0" layoutY="214.0" mnemonicParsing="false" onAction="#cancelSearch" text="Abbrechen" visible="false">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
@@ -123,29 +127,39 @@
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <CheckBox fx:id="checkBox_useExternalApp" layoutX="114.0" layoutY="104.0" mnemonicParsing="false" selected="true" text="Externen Archivar verwenden.">
+      <CheckBox fx:id="checkBox_useExternalApp" layoutX="117.0" layoutY="116.0" mnemonicParsing="false" selected="true" text="Externen Archivar verwenden.">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></CheckBox>
-      <TextField fx:id="textField_appDir" layoutX="25.0" layoutY="149.0" maxWidth="339.0" minWidth="339.0" prefHeight="25.0" prefWidth="339.0">
+      <TextField fx:id="textField_appDir" layoutX="25.0" layoutY="170.0" maxWidth="339.0" minWidth="339.0" prefHeight="25.0" prefWidth="339.0">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></TextField>
-      <Label layoutX="24.0" layoutY="132.0" text="Anwendungspfad">
+      <Label layoutX="24.0" layoutY="153.0" text="Anwendungspfad">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <Button fx:id="button_findArchivist" layoutX="370.0" layoutY="149.0" maxHeight="1.7976931348623157E308" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#findArchivist" prefHeight="25.0" prefWidth="74.0" text="Öffnen">
+      <Button fx:id="button_findArchivist" layoutX="370.0" layoutY="170.0" maxHeight="1.7976931348623157E308" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#findArchivist" prefHeight="25.0" prefWidth="74.0" text="Öffnen">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
-      <Label layoutX="225.0" layoutY="36.0" text="Verzeichnis">
+      <Label layoutX="225.0" layoutY="36.0" text="Unterverzeichnis (optional)">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <TextField fx:id="textField_rootAppend" layoutX="223.0" layoutY="53.0" maxWidth="222.0" minWidth="222.0" prefHeight="25.0" prefWidth="222.0" promptText="optional, z.B. &quot;home/&quot;">
+      <TextField fx:id="textField_rootAddition" layoutX="223.0" layoutY="53.0" maxWidth="222.0" minWidth="222.0" prefHeight="25.0" prefWidth="222.0" promptText="z.B. &quot;users&quot; oder &quot;home&quot;">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></TextField>
+      <CheckBox fx:id="checkBox_deleteExtracted" layoutX="722.0" layoutY="173.0" maxWidth="200.0" minWidth="200.0" mnemonicParsing="false" onAction="#deleteExtractedWarning" prefHeight="16.0" prefWidth="200.0" text="Entpackte Archive löschen.">
+         <font>
+            <Font name="SansSerif Regular" size="12.0" />
+         </font>
+      </CheckBox>
+      <Button fx:id="button_rootAddition" layoutX="370.0" layoutY="82.0" maxHeight="1.7976931348623157E308" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#findRootAddition" prefHeight="25.0" prefWidth="74.0" text="Öffnen">
+         <font>
+            <Font name="SansSerif Regular" size="12.0" />
+         </font>
+      </Button>
    </children>
 </AnchorPane>

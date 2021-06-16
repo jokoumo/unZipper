@@ -93,23 +93,29 @@ public class ExtractService extends Service<Integer> {
                         "-o" + ARCHIVE.getDIR().getParent().toString(),
                         "-aos");
             }
+
+            builder.redirectErrorStream(true);
             Process process = builder.start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
-            while(true) {
-                line = r.readLine();
-                if(line == null) {
-                    break;
-                }
+
+            do {
+                line = reader.readLine();
                 System.out.println(line);
+            } while (line != null);
+
+            try {
+                process.waitFor();
+                System.out.println("ExitValue: " + process.exitValue());
+                if(process.exitValue() == 0) {
+                    ARCHIVE.setStatus("Entpackt");
+                    ARCHIVE.setExtracted(true);
+
+                } else
+                    ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
+            } catch (InterruptedException e) {
+                ARCHIVE.setStatus(e.getMessage());
             }
-            System.out.println("+++++ ERGEBNIS: " + process.exitValue());
-            if(process.exitValue() == 0) {
-                ARCHIVE.setStatus("Entpackt");
-                ARCHIVE.setExtracted(true);
-            }
-            else
-                ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
         } catch (IOException e) {
             System.out.println("Fehler: " + e.getMessage());
             ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
