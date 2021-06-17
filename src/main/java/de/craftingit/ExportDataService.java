@@ -33,7 +33,7 @@ public class ExportDataService extends Service<Boolean> {
                     }
                     return true;
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.err.println(e.getMessage());
                     return false;
                 } finally {
                     writer.flush();

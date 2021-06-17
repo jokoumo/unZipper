@@ -3,8 +3,6 @@ package de.craftingit;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.Arrays;
-import java.util.Scanner;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -22,6 +20,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class C_Main {
+    private final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
     private final double MIN_WINDOW_HEIGHT = 700;
     private final double MIN_WINDOW_WIDTH = 965;
     private final int MAX_TASKS = 12;
@@ -146,7 +145,7 @@ public class C_Main {
                                 tColumn_dir.setPrefWidth(tColumn_dir.getMinWidth() + windowWidth - MIN_WINDOW_WIDTH);
                             }
                         } catch (Exception e) {
-                            System.out.println(e.getMessage());
+                            System.err.println("Das muss so sein: " + e.getMessage());
                         }
                         return null;
                     }
@@ -156,8 +155,8 @@ public class C_Main {
         backgroundService.setPeriod(Duration.millis(50));
         backgroundService.start();
 
-        // Wenn kein MS Windows verwendet wird
-        if(!System.getProperty("os.name").toLowerCase().startsWith("windows")) {
+        // Wenn kein MS Windows verwendet wird:
+        if(!IS_WINDOWS) {
             comboBox_roots.setDisable(true);
             textField_appDir.setDisable(true);
             button_updateRoots.setDisable(true);
@@ -169,16 +168,20 @@ public class C_Main {
     @FXML
     private void updateGui(boolean disable) {
         button_rootAddition.setDisable(disable);
-        button_findArchivist.setDisable(disable);
         button_search.setDisable(disable);
         menuItem_importTable.setDisable(disable);
         pwField.setDisable(disable);
         textField_rootAddition.setDisable(disable);
-        textField_appDir.setDisable(disable);
         textField_includeFilter.setDisable(disable);
         textField_excludeFilter.setDisable(disable);
         checkBox_useExternalApp.setDisable(disable);
         checkBox_deleteExtracted.setDisable(disable);
+
+        if(IS_WINDOWS) {
+            textField_appDir.setDisable(disable);
+            button_findArchivist.setDisable(disable);
+        }
+
         if(disable) {
             button_extractAll.setDisable(true);
             button_extractSingle.setDisable(true);
@@ -188,6 +191,7 @@ public class C_Main {
             button_extractSingle.setDisable(tableView_archives.getSelectionModel().getSelectedItem() == null);
             menuItem_exportTable.setDisable(tableView_archives.getItems().isEmpty());
         }
+        
         button_cancelExtract.setDisable(false);
         tableView_archives.refresh();
     }
@@ -311,7 +315,7 @@ public class C_Main {
         }
 
         ExportDataService exportDataService = new ExportDataService(archives, file);
-        
+
         exportDataService.setOnSucceeded(workerStateEvent -> {
             if(exportDataService.getValue()) {
                 label_status.setText("Export abgeschlossen.");
@@ -355,7 +359,8 @@ public class C_Main {
         });
 
         importDataService.setOnSucceeded(workerStateEvent -> {
-            tableView_archives.setItems(importDataService.getValue());
+            archives = importDataService.getValue();
+            tableView_archives.setItems(archives);
             progressBar.setProgress(1);
             label_status.setText("Import abgeschlossen.");
             updateGui(false);

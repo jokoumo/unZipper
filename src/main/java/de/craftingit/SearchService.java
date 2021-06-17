@@ -57,7 +57,7 @@ public class SearchService extends Service<ObservableList<Archive>> {
                         }
                     });
                 } catch (IOException e) {
-                    System.out.println("Fehler bei der Suche: " + e.getMessage());
+                    System.err.println("Fehler bei der Suche: " + e.getMessage());
                 }
 
                 return archives;

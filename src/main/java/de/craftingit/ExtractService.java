@@ -64,7 +64,7 @@ public class ExtractService extends Service<Integer> {
                         if (Files.size(destFile.toPath()) == 0)
                             Files.delete(destFile.toPath());
                     } catch(Exception exDel) {
-                        System.out.println("Keine Datei gelöscht: " + exDel.getMessage());
+                        System.err.println("Keine Datei gelöscht: " + exDel.getMessage());
                     }
                     entry = file.getNextEntry();
                 }
@@ -106,7 +106,6 @@ public class ExtractService extends Service<Integer> {
 
             try {
                 process.waitFor();
-                System.out.println("ExitValue: " + process.exitValue());
                 if(process.exitValue() == 0) {
                     ARCHIVE.setStatus("Entpackt");
                     ARCHIVE.setExtracted(true);
@@ -117,7 +116,7 @@ public class ExtractService extends Service<Integer> {
                 ARCHIVE.setStatus(e.getMessage());
             }
         } catch (IOException e) {
-            System.out.println("Fehler: " + e.getMessage());
+            System.err.println("Fehler: " + e.getMessage());
             ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
         }
     }
