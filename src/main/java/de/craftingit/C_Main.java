@@ -1,16 +1,17 @@
 package de.craftingit;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Arrays;
+import java.util.Scanner;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -23,17 +24,16 @@ import javafx.util.Duration;
 public class C_Main {
     private final double MIN_WINDOW_HEIGHT = 700;
     private final double MIN_WINDOW_WIDTH = 965;
+    private final int MAX_TASKS = 12;
+    private int countTasks;
+    private int countArchives;
+    private int countSucceededServices;
+    private double windowWidth;
+    private boolean isExtracting;
     private Stage stage = null;
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
     private Path dir;
-    private final int MAX_TASKS = 6;
-    private int countTasks;
-    private int countArchives;
-    private int countSucceededServices;
-    private int lastArchiveId;
-    private double windowWidth;
-    private boolean isExtracting;
     private SearchService searchService;
     private ExtractService extractService;
 
@@ -52,6 +52,8 @@ public class C_Main {
     @FXML
     private Button button_updateRoots;
     @FXML
+    private Button button_rootAddition;
+    @FXML
     private Button button_findArchivist;
     @FXML
     private TextField textField_rootAddition;
@@ -62,7 +64,7 @@ public class C_Main {
     @FXML
     private ComboBox<String> comboBox_formats;
     @FXML
-    private ChoiceBox<Integer> choiceBox_tasks;
+    private ComboBox<Integer> comboBox_tasks;
     @FXML
     private TableView<Archive> tableView_archives;
     @FXML
@@ -72,9 +74,9 @@ public class C_Main {
     @FXML
     private TableColumn<Archive, Long> tColumn_id;
     @FXML
-    private TextField textField_filter;
+    private TextField textField_includeFilter;
     @FXML
-    private TextField textField_exclude;
+    private TextField textField_excludeFilter;
     @FXML
     private TextField textField_appDir;
     @FXML
@@ -87,6 +89,10 @@ public class C_Main {
     private CheckBox checkBox_useExternalApp;
     @FXML
     private ProgressBar progressBar;
+    @FXML
+    private MenuItem menuItem_exportTable;
+    @FXML
+    private MenuItem menuItem_importTable;
 
     @FXML
     private void initialize() {
@@ -94,10 +100,10 @@ public class C_Main {
 
         textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
 
-        choiceBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
+        comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
         for(int i = 1; i <= MAX_TASKS; i++)
-            choiceBox_tasks.getItems().add(i);
-        choiceBox_tasks.setValue(1);
+            comboBox_tasks.getItems().add(i);
+        comboBox_tasks.setValue(1);
 
         textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. \"Benutzer\\Default\". Andere z.B. \"home/usr\""));
 
@@ -117,7 +123,7 @@ public class C_Main {
         button_extractAll.setDisable(true);
         button_extractSingle.setDisable(true);
         button_cancelExtract.setVisible(false);
-        label_status.setVisible(false);
+        menuItem_exportTable.setDisable(true);
 
         ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
             @Override
@@ -158,6 +164,32 @@ public class C_Main {
             button_findArchivist.setDisable(true);
             textField_appDir.setText("Installation von \"p7zip-full\" benötigt");
         }
+    }
+
+    @FXML
+    private void updateGui(boolean disable) {
+        button_rootAddition.setDisable(disable);
+        button_findArchivist.setDisable(disable);
+        button_search.setDisable(disable);
+        menuItem_importTable.setDisable(disable);
+        pwField.setDisable(disable);
+        textField_rootAddition.setDisable(disable);
+        textField_appDir.setDisable(disable);
+        textField_includeFilter.setDisable(disable);
+        textField_excludeFilter.setDisable(disable);
+        checkBox_useExternalApp.setDisable(disable);
+        checkBox_deleteExtracted.setDisable(disable);
+        if(disable) {
+            button_extractAll.setDisable(true);
+            button_extractSingle.setDisable(true);
+            menuItem_exportTable.setDisable(true);
+        } else {
+            button_extractAll.setDisable(tableView_archives.getItems().isEmpty());
+            button_extractSingle.setDisable(tableView_archives.getSelectionModel().getSelectedItem() == null);
+            menuItem_exportTable.setDisable(tableView_archives.getItems().isEmpty());
+        }
+        button_cancelExtract.setDisable(false);
+        tableView_archives.refresh();
     }
 
     @FXML
@@ -229,25 +261,24 @@ public class C_Main {
         changeDir();
         Archive.setCountId(1);
         archives.clear();
-        lastArchiveId = 0;
+        tableView_archives.getItems().clear();
         progressBar.setProgress(-1);
         button_search.setVisible(false);
         button_cancelSearch.setVisible(true);
-        label_status.setVisible(true);
         label_status.setText("Suche läuft...");
+        updateGui(true);
 
         searchService = new SearchService(dir, comboBox_formats.getValue(),
-                textField_filter.getText(), textField_exclude.getText());
+                textField_includeFilter.getText(), textField_excludeFilter.getText());
 
         searchService.setOnSucceeded(workerStateEvent -> {
             archives.addAll(searchService.getValue());
-            progressBar.setProgress(0);
             tableView_archives.setItems(archives);
-            button_extractAll.setDisable(tableView_archives.getItems().isEmpty());
-            button_extractSingle.setDisable(tableView_archives.getItems().isEmpty());
+            progressBar.setProgress(1);
             button_search.setVisible(true);
             button_cancelSearch.setVisible(false);
             label_status.setText("Suche abgeschlossen.");
+            updateGui(false);
         });
         searchService.start();
     }
@@ -259,104 +290,103 @@ public class C_Main {
         button_search.setVisible(true);
         button_cancelSearch.setVisible(false);
         label_status.setText("Suche abgebrochen.");
+        updateGui(false);
     }
 
     @FXML
     private void exportTable() {
-//        String dir;
-//        File file;
-//        BufferedWriter writer = null;
-//        FileChooser chooser = new FileChooser();
-//        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Datei","*.csv"));
-//        chooser.setInitialDirectory(new File(System.getProperty("user.home")));
-//
-//        try {
-//            dir = chooser.showSaveDialog(stage).toString();
-//
-//            try {
-//                String data;
-//                file = Files.createFile(Path.of(dir)).toFile();
-//                writer = new BufferedWriter(new FileWriter(file));
-//                for(Archive archive : archives) {
-//                    data = (archive.getID() + 1) + ";" + archive.getDIR() + ";" + archive.getStatus() + "\n";
-//                    writer.write(data);
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            } finally {
-//                assert writer != null;
-//                writer.flush();
-//                writer.close();
-//            }
-//        } catch (NullPointerException | IOException e) {
-//            e.printStackTrace();
-//        }
-        ExportData exportData = new ExportData(archives, stage);
-        exportData.setOnSucceeded(workerStateEvent -> {
-            System.out.println(exportData.getValue());
+        File file;
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Datei","*.csv"));
+        chooser.setInitialDirectory(new File(System.getProperty("user.home")));
+
+        try {
+            file = chooser.showSaveDialog(stage);
+            label_status.setText("Exportiere...");
+            progressBar.setProgress(-1);
+            updateGui(true);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        ExportDataService exportDataService = new ExportDataService(archives, file);
+        
+        exportDataService.setOnSucceeded(workerStateEvent -> {
+            if(exportDataService.getValue()) {
+                label_status.setText("Export abgeschlossen.");
+                progressBar.setProgress(1);
+            }
+            else {
+                label_status.setText("Export fehlgeschlagen.");
+                progressBar.setProgress(0);
+            }
+            updateGui(false);
         });
-        exportData.start();
+        exportDataService.start();
     }
 
     @FXML
     private  void importTable() {
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Dateien","*.csv"));
+        chooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        File file;
 
-    }
-
-    @FXML
-    private void setGuiWhenExtracting() {
-        if(isExtracting) {
-            button_extractAll.setVisible(false);
-            button_extractSingle.setVisible(false);
-            button_cancelExtract.setVisible(true);
-            button_search.setDisable(true);
-            label_status.setVisible(true);
-            label_status.setText("Entpacke...");
-        } else {
-            button_extractAll.setVisible(true);
-            button_extractSingle.setVisible(true);
-            button_cancelExtract.setVisible(false);
-            button_search.setDisable(false);
-            button_cancelExtract.setDisable(false);
-            button_cancelExtract.setVisible(false);
-
-            if (countArchives < 0) {
-                label_status.setText(countArchives == -1 ? "Kein Archiv ausgewählt.":"Entpacken abgebrochen.");
-                progressBar.setProgress(0);
-            } else {
-                label_status.setText("Fertig!");
-                progressBar.setProgress(1);
-            }
-        }
-    }
-
-    @FXML
-    private void extractSingle() {
-        countArchives = 0;
         try {
-            Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
-            isExtracting = true;
-            countTasks++;
+            file = new File(chooser.showOpenDialog(stage).toString());
+            updateGui(true);
             progressBar.setProgress(-1);
-            extractStart(archive.getID() -1);
-            setGuiWhenExtracting();
-            tableView_archives.refresh();
-        } catch (Exception e) {
-            isExtracting = false;
-            countArchives = -1;
-            setGuiWhenExtracting();
-            System.out.println("Fehler: " + "Kein Archiv ausgewählt");
+            label_status.setText("Importiere...");
+            archives.clear();
+            tableView_archives.getItems().clear();
+        } catch (NullPointerException e1) {
+            System.err.println(e1.getMessage());
+            updateGui(false);
+            return;
         }
+
+        ImportDataService importDataService = new ImportDataService(file);
+
+        importDataService.setOnCancelled(workerStateEvent -> {
+            progressBar.setProgress(0);
+            label_status.setText("Import fehlgeschlagen. Bitte Datei prüfen.");
+            updateGui(false);
+        });
+
+        importDataService.setOnSucceeded(workerStateEvent -> {
+            tableView_archives.setItems(importDataService.getValue());
+            progressBar.setProgress(1);
+            label_status.setText("Import abgeschlossen.");
+            updateGui(false);
+        });
+        importDataService.start();
     }
 
     @FXML
-    private void extractAll() {
+    private void detectTableSelection() {
+        button_extractSingle.setDisable(tableView_archives.getSelectionModel().getSelectedItem() == null);
+    }
+
+    @FXML
+    private void extractArchive(ActionEvent event) {
         isExtracting = true;
         countSucceededServices = 0;
         countArchives = 0;
         countTasks = 0;
-        progressBar.setProgress(0);
-        setGuiWhenExtracting();
+        button_cancelExtract.setVisible(true);
+        button_extractSingle.setVisible(false);
+        button_extractAll.setVisible(false);
+        label_status.setText("Entpacke...");
+        updateGui(true);
+
+        if(event.getSource() == button_extractSingle) {
+            countArchives = archives.size() -1;
+            progressBar.setProgress(-1);
+        }
+
+        if(event.getSource() == button_extractAll)
+            progressBar.setProgress(0);
 
         ScheduledService<Boolean> extractTaskService = new ScheduledService<Boolean>() {
             @Override
@@ -364,15 +394,26 @@ public class C_Main {
                 return new Task<Boolean>() {
                     @Override
                     protected Boolean call() {
-                        if(countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
+                        if (countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
                             isExtracting = false;
                             this.cancel();
-                            Platform.runLater(C_Main.this::setGuiWhenExtracting);
-                        } else if(countTasks < choiceBox_tasks.getValue() && !(countArchives < 0 || countArchives >= archives.size())) {
-                            extractStart(countArchives);
+                            Platform.runLater(() -> {
+                                updateGui(false);
+                                progressBar.setProgress(1);
+                                button_cancelExtract.setVisible(false);
+                                button_extractSingle.setVisible(true);
+                                button_extractAll.setVisible(true);
+                                label_status.setText(countArchives < 0 ? "Vorgang abgebrochen." : "Fertig!");
+                            });
+                        } else if (countTasks < comboBox_tasks.getValue() && !(countArchives < 0 || countArchives >= archives.size())) {
+                            if(progressBar.getProgress() >= 0)  // Alles entpacken
+                                extractStart(countArchives);
+                            else {                              // Auswahl entpacken
+                                Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
+                                extractStart(archive.getID() -1);
+                            }
                             countTasks++;
                             countArchives++;
-                            tableView_archives.refresh();
                         }
                         return null;
                     }
@@ -393,11 +434,7 @@ public class C_Main {
         }
 
         extractService.setOnRunning(workerStateEvent -> {
-            if (countArchives >= 0 && countArchives < archives.size() && !archives.get(countArchives).isExtracted()) {
-                tableView_archives.refresh();
-                if (checkBox_hideExtracted.isSelected())
-                    hideExtracted();
-            }
+            tableView_archives.refresh();
         });
 
         extractService.setOnSucceeded(workerStateEvent -> {
@@ -413,12 +450,11 @@ public class C_Main {
                 }
             }
 
+            if (checkBox_hideExtracted.isSelected())
+                hideExtracted();
+
             if (countArchives >= 0 && progressBar.getProgress() >= 0)
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
-            else {
-                isExtracting = false;
-                setGuiWhenExtracting();
-            }
         });
 
         extractService.setOnFailed(workerStateEvent -> {
@@ -432,7 +468,7 @@ public class C_Main {
 
     @FXML
     private void cancelExtract() {
-        countArchives = -10;
+        countArchives = -1;
         button_cancelExtract.setDisable(true);
         label_status.setText("Vorgang wird abgebrochen. Bitte warten.");
         progressBar.setProgress(-1);
@@ -482,7 +518,7 @@ public class C_Main {
         if(searchService != null && searchService.isRunning()) {
             alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?");
         } else if(isExtracting) {
-            alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\nEs kann zu einem Datenverlust kommen.");
+            alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\n\nDabei kann zu einem Datenverlust kommen.");
         } else {
             stage.close();
             return;

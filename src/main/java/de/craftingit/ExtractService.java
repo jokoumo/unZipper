@@ -40,7 +40,7 @@ public class ExtractService extends Service<Integer> {
         };
     }
 
-    public void extract7zIntern() {
+    private void extract7zIntern() {
         File destFile;
         ARCHIVE.setStatus("Wird entpackt...");
 
@@ -74,7 +74,7 @@ public class ExtractService extends Service<Integer> {
         }
     }
 
-    public void extract7zExtern() {
+    private void extract7zExtern() {
         ARCHIVE.setStatus("Wird entpackt...");
         ProcessBuilder builder;
         try {

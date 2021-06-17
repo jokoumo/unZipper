@@ -19,6 +19,13 @@ public class Archive {
         countId++;
     }
 
+    Archive(int id, Path dir, String status, boolean isExtracted) {
+        this.ID = id;
+        this.DIR = dir;
+        this.status = status;
+        this.isExtracted = isExtracted;
+    }
+
     public Path getDIR() {
         return DIR;
     }
