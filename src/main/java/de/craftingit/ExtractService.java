@@ -30,9 +30,9 @@ public class ExtractService extends Service<Integer> {
             protected Integer call() throws Exception {
                 if (!ARCHIVE.isExtracted()) {
                     if(EXEC_EXTERN) {
-                        extract7zExtern();  //extern mit 7z.exe entpacken
+                        extractExtern();    //extern mit 7z.exe entpacken (für alle Formate)
                     } else {
-                        extract7zIntern();  //intern Entpacken
+                        extract7zIntern();  //intern entpacken (nur .7z Format)
                     }
                 }
                 return 0;
@@ -74,7 +74,7 @@ public class ExtractService extends Service<Integer> {
         }
     }
 
-    private void extract7zExtern() {
+    private void extractExtern() {
         ARCHIVE.setStatus("Wird entpackt...");
         ProcessBuilder builder;
         try {

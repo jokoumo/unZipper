@@ -35,6 +35,7 @@ public class C_Main {
     private Path dir;
     private SearchService searchService;
     private ExtractService extractService;
+    private ScheduledService<Boolean> extractTaskService;
 
     @FXML
     private AnchorPane anchorPane_main;
@@ -92,25 +93,33 @@ public class C_Main {
     private MenuItem menuItem_exportTable;
     @FXML
     private MenuItem menuItem_importTable;
+    @FXML
+    private Label label_pw;
 
     @FXML
     private void initialize() {
         updateRoots();
 
-        textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
-
-        comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
         for(int i = 1; i <= MAX_TASKS; i++)
             comboBox_tasks.getItems().add(i);
         comboBox_tasks.setValue(1);
 
-        textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. \"Benutzer\\Default\". Andere z.B. \"home/usr\""));
+        comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
+        textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. 'Benutzer\\Default'. Andere z.B. 'home/usr'"));
+        checkBox_useExternalApp.setTooltip(new Tooltip("Setzt die Installation der Anwendung '7zip' voraus."));
+        checkBox_hideExtracted.setTooltip(new Tooltip("Bereits entpackte Archive werden ausgeblendet"));
+        checkBox_deleteExtracted.setTooltip(new Tooltip("Archive werden nach dem erfolgreichen Entpacken gelöscht."));
+        button_extractSingle.setTooltip(new Tooltip("Entpackt das ausgewählte Archiv."));
+        button_extractAll.setTooltip(new Tooltip("Entpackt alle aufgelisteten Archive."));
+        pwField.setTooltip(new Tooltip("*Archive ohne Passwortschutz, werden immer entpackt."));
+        label_pw.setTooltip(new Tooltip("*Archive ohne Passwortschutz, werden immer entpackt."));
 
         comboBox_formats.getItems().add(".7z");
-        //comboBox_formats.getItems().add(".iso");
-        //comboBox_formats.getItems().add(".rar");
-        //comboBox_formats.getItems().add(".tar");
-        //comboBox_formats.getItems().add(".zip");
+        comboBox_formats.getItems().add(".img");
+        comboBox_formats.getItems().add(".iso");
+        comboBox_formats.getItems().add(".rar");
+        comboBox_formats.getItems().add(".tar");
+        comboBox_formats.getItems().add(".zip");
         comboBox_formats.setValue(".7z");
 
         tColumn_dir.setCellValueFactory(new PropertyValueFactory<>("DIR"));
@@ -162,7 +171,8 @@ public class C_Main {
             button_updateRoots.setDisable(true);
             button_findArchivist.setDisable(true);
             textField_appDir.setText("Installation von \"p7zip-full\" benötigt");
-        }
+        } else
+            textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
     }
 
     @FXML
@@ -174,8 +184,8 @@ public class C_Main {
         textField_rootAddition.setDisable(disable);
         textField_includeFilter.setDisable(disable);
         textField_excludeFilter.setDisable(disable);
-        checkBox_useExternalApp.setDisable(disable);
         checkBox_deleteExtracted.setDisable(disable);
+        checkBox_useExternalApp.setDisable(!comboBox_formats.getValue().equals(".7z"));
 
         if(IS_WINDOWS) {
             textField_appDir.setDisable(disable);
@@ -191,7 +201,7 @@ public class C_Main {
             button_extractSingle.setDisable(tableView_archives.getSelectionModel().getSelectedItem() == null);
             menuItem_exportTable.setDisable(tableView_archives.getItems().isEmpty());
         }
-        
+
         button_cancelExtract.setDisable(false);
         tableView_archives.refresh();
     }
@@ -226,6 +236,16 @@ public class C_Main {
             textField_rootAddition.setText(dir);
         } catch (Exception e) {
             System.err.println(e.getMessage());
+        }
+    }
+
+    @FXML
+    private void changeFormat() {
+        if(comboBox_formats.getValue().equals(".7z"))
+            checkBox_useExternalApp.setDisable(false);
+        else {
+            checkBox_useExternalApp.setDisable(true);
+            checkBox_useExternalApp.setSelected(true);
         }
     }
 
@@ -393,7 +413,7 @@ public class C_Main {
         if(event.getSource() == button_extractAll)
             progressBar.setProgress(0);
 
-        ScheduledService<Boolean> extractTaskService = new ScheduledService<Boolean>() {
+        extractTaskService = new ScheduledService<Boolean>() {
             @Override
             protected Task<Boolean> createTask() {
                 return new Task<Boolean>() {
@@ -529,12 +549,36 @@ public class C_Main {
             return;
         }
 
-        if(alert.showAndWait().get() == buttonYes)
+        if(alert.showAndWait().get() == buttonYes) {
+            extractTaskService.cancel();
+            extractService.cancel();
+            searchService.cancel();
             stage.close();
+        }
     }
 
-//    @FXML
-//    private void switchToSecondary() throws IOException {
-//        App.setRoot("secondary");
-//    }
+    @FXML
+    private void resetApp() throws IOException {
+        ButtonType buttonYes = new ButtonType("Ja", ButtonBar.ButtonData.YES);
+        ButtonType buttonNo = new ButtonType("Nein", ButtonBar.ButtonData.NO);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", buttonYes, buttonNo);
+        alert.setTitle("GUI zurücksetzen");
+        alert.setHeaderText("Prozesse abbrechen und Oberfläche zurücksetzen?");
+        alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\n\nDabei kann zu einem Datenverlust kommen.");
+
+        if(searchService == null && extractTaskService == null && extractService == null && !isExtracting) {
+            App.setRoot("Main");
+            return;
+        }
+
+        if(alert.showAndWait().get() == buttonYes) {
+            if(extractTaskService != null)
+                extractTaskService.cancel();
+            if(extractService != null)
+                extractService.cancel();
+            if(searchService != null)
+                searchService.cancel();
+            App.setRoot("Main");
+        }
+    }
 }
