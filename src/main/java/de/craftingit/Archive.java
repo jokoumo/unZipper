@@ -10,10 +10,10 @@ public class Archive {
     private String status;
     private boolean isExtracted = false;
 
-    Archive(Path path) {
-        path = Paths.get(path.toString().replace(".\\", ""));
-        path = Paths.get(path.toString().replace("./", ""));
-        this.DIR = path;
+    Archive(Path dir) {
+        dir = Paths.get(dir.toString().replace(".\\", ""));
+        dir = Paths.get(dir.toString().replace("./", ""));
+        this.DIR = dir;
         this.status = "Verpackt";
         this.ID = countId;
         countId++;

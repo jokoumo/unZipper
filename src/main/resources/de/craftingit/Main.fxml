@@ -29,11 +29,11 @@
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
       <ComboBox fx:id="comboBox_roots" layoutX="24.0" layoutY="53.0" prefHeight="25.0" prefWidth="84.0" />
-      <Button fx:id="button_search" layoutX="14.0" layoutY="214.0" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#searchArchives" prefHeight="25.0" prefWidth="74.0" text="Suchen">
+      <Button fx:id="button_search" defaultButton="true" layoutX="14.0" layoutY="214.0" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#searchArchives" prefHeight="25.0" prefWidth="74.0" text="Suchen">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
-      <ComboBox fx:id="comboBox_formats" layoutX="24.0" layoutY="111.0" onAction="#changeFormat" prefHeight="25.0" prefWidth="84.0" />
+      <ComboBox fx:id="comboBox_formats" layoutX="24.0" layoutY="111.0" prefHeight="25.0" prefWidth="84.0" />
       <Rectangle arcHeight="5.0" arcWidth="5.0" fill="#ffffff00" height="171.0" layoutX="478.0" layoutY="32.0" stroke="#909090" strokeType="INSIDE" width="455.0" />
       <TextField fx:id="textField_includeFilter" layoutX="488.0" layoutY="81.0" maxWidth="200.0" prefHeight="25.0" prefWidth="200.0">
          <font>
@@ -103,7 +103,7 @@
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
       <ProgressBar fx:id="progressBar" layoutX="350.0" layoutY="642.0" maxHeight="-Infinity" maxWidth="250.0" minHeight="-Infinity" minWidth="250.0" prefHeight="18.0" prefWidth="250.0" progress="0.0" AnchorPane.bottomAnchor="40.0" />
-      <Button fx:id="button_cancelSearch" layoutX="14.0" layoutY="214.0" mnemonicParsing="false" onAction="#cancelSearch" text="Abbrechen" visible="false">
+      <Button fx:id="button_cancelSearch" cancelButton="true" layoutX="14.0" layoutY="214.0" mnemonicParsing="false" onAction="#cancelSearch" text="Abbrechen" visible="false">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
@@ -127,11 +127,7 @@
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Label>
-      <CheckBox fx:id="checkBox_useExternalApp" layoutX="117.0" layoutY="116.0" mnemonicParsing="false" selected="true" text="Externen Archivar verwenden.">
-         <font>
-            <Font name="SansSerif Regular" size="12.0" />
-         </font></CheckBox>
-      <TextField fx:id="textField_appDir" layoutX="25.0" layoutY="170.0" maxWidth="355.0" minWidth="347.0" prefHeight="25.0" prefWidth="355.0">
+      <TextField fx:id="textField_appDir" layoutX="25.0" layoutY="170.0" maxWidth="355.0" minWidth="347.0" onKeyTyped="#findArchivistTextColor" onMouseExited="#findArchivistTextColor" prefHeight="25.0" prefWidth="355.0">
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></TextField>

@@ -12,16 +12,16 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 public class SearchService extends Service<ObservableList<Archive>> {
     private final ObservableList<Archive> archives = FXCollections.observableArrayList();
-    private final Path dir;
-    private final String format;
-    private final String filter;
-    private final String exclude;
+    private final Path DIR;
+    private final String FORMAT;
+    private final String INCLUDE;
+    private final String EXCLUDE;
 
-    SearchService(Path dir, String format, String filter, String exclude) {
-        this.dir = dir;
-        this.format = format;
-        this.filter = filter;
-        this.exclude = exclude;
+    SearchService(Path dir, String format, String include, String exclude) {
+        this.DIR = dir;
+        this.FORMAT = format;
+        this.INCLUDE = include;
+        this.EXCLUDE = exclude;
     }
 
     @Override
@@ -30,13 +30,13 @@ public class SearchService extends Service<ObservableList<Archive>> {
             @Override
             protected ObservableList<Archive> call() {
                 try {
-                    Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+                    Files.walkFileTree(DIR, new SimpleFileVisitor<>() {
 
                         @Override
                         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                            if(file.toString().endsWith(format) && !(file.toString().contains("$RECYCLE") || file.toString().contains("Trash/files"))) {
-                                if(file.getFileName().toString().contains(filter)) {
-                                    if(exclude.isEmpty() || !file.getFileName().toString().contains(exclude)) {
+                            if(file.toString().endsWith(FORMAT) && !(file.toString().contains("$RECYCLE") || file.toString().contains("Trash/files"))) {
+                                if(file.getFileName().toString().contains(INCLUDE)) {
+                                    if(EXCLUDE.isEmpty() || !file.getFileName().toString().contains(EXCLUDE)) {
                                         archives.add(new Archive(file.toAbsolutePath()));
                                         return FileVisitResult.CONTINUE;
                                     }

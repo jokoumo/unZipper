@@ -23,7 +23,7 @@ public class C_Main {
     private final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
     private final double MIN_WINDOW_HEIGHT = 700;
     private final double MIN_WINDOW_WIDTH = 965;
-    private final int MAX_TASKS = 12;
+    private final int MAX_TASKS = 6;
     private int countTasks;
     private int countArchives;
     private int countSucceededServices;
@@ -32,7 +32,7 @@ public class C_Main {
     private Stage stage = null;
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
-    private Path dir;
+    private Path dirRoot = Path.of("");
     private SearchService searchService;
     private ExtractService extractService;
     private ScheduledService<Boolean> extractTaskService;
@@ -86,8 +86,6 @@ public class C_Main {
     @FXML
     private CheckBox checkBox_deleteExtracted;
     @FXML
-    private CheckBox checkBox_useExternalApp;
-    @FXML
     private ProgressBar progressBar;
     @FXML
     private MenuItem menuItem_exportTable;
@@ -104,9 +102,8 @@ public class C_Main {
             comboBox_tasks.getItems().add(i);
         comboBox_tasks.setValue(1);
 
-        comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Prozessorlast."));
+        comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Auslastung von Prozessor und Datenträger."));
         textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. 'Benutzer\\Default'. Andere z.B. 'home/usr'"));
-        checkBox_useExternalApp.setTooltip(new Tooltip("Setzt die Installation der Anwendung '7zip' voraus."));
         checkBox_hideExtracted.setTooltip(new Tooltip("Bereits entpackte Archive werden ausgeblendet"));
         checkBox_deleteExtracted.setTooltip(new Tooltip("Archive werden nach dem erfolgreichen Entpacken gelöscht."));
         button_extractSingle.setTooltip(new Tooltip("Entpackt das ausgewählte Archiv."));
@@ -179,13 +176,15 @@ public class C_Main {
     private void updateGui(boolean disable) {
         button_rootAddition.setDisable(disable);
         button_search.setDisable(disable);
+        button_updateRoots.setDisable(disable);
         menuItem_importTable.setDisable(disable);
         pwField.setDisable(disable);
         textField_rootAddition.setDisable(disable);
         textField_includeFilter.setDisable(disable);
         textField_excludeFilter.setDisable(disable);
         checkBox_deleteExtracted.setDisable(disable);
-        checkBox_useExternalApp.setDisable(!comboBox_formats.getValue().equals(".7z"));
+        comboBox_formats.setDisable(disable);
+        comboBox_roots.setDisable(disable);
 
         if(IS_WINDOWS) {
             textField_appDir.setDisable(disable);
@@ -218,40 +217,31 @@ public class C_Main {
 
     @FXML
     private void changeDir() {
-        if(System.getProperty("os.name").toLowerCase().startsWith("windows"))
-            dir = Paths.get(comboBox_roots.getValue() + (textField_rootAddition.getText().isEmpty() ? "." : textField_rootAddition.getText()));
+        if(IS_WINDOWS)
+            dirRoot = Paths.get(comboBox_roots.getValue() + (textField_rootAddition.getText().isEmpty() ? "." : textField_rootAddition.getText()));
         else
-            dir = Paths.get(comboBox_roots.getValue() + textField_rootAddition.getText());
+            dirRoot = Paths.get(comboBox_roots.getValue() + textField_rootAddition.getText());
     }
 
     @FXML
     private void findRootAddition() {
         try {
-            String dir = new DirectoryChooser().showDialog(stage).toString();
+            String localDir = new DirectoryChooser().showDialog(stage).toString();
             for(File root : roots) {
-                if(dir.contains(root.toString()))
+                if(localDir.contains(root.toString()))
                     comboBox_roots.setValue(root.toString());
-                dir = dir.replace(root.toString(), "");
+                if(IS_WINDOWS)
+                    localDir = localDir.replace(root.toString(), "");
             }
-            textField_rootAddition.setText(dir);
+            textField_rootAddition.setText(localDir);
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
     }
 
     @FXML
-    private void changeFormat() {
-        if(comboBox_formats.getValue().equals(".7z"))
-            checkBox_useExternalApp.setDisable(false);
-        else {
-            checkBox_useExternalApp.setDisable(true);
-            checkBox_useExternalApp.setSelected(true);
-        }
-    }
-
-    @FXML
     private void findArchivist() {
-        String dir;
+        String localDir = "";
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("EXE Dateien","*.exe"));
 
@@ -260,11 +250,16 @@ public class C_Main {
         } catch(NullPointerException e) {
             chooser.setInitialDirectory(new File(System.getProperty("user.home")));
         }
-        dir = new File(String.valueOf(chooser.showOpenDialog(stage))).getAbsolutePath();
-        if(!dir.endsWith("null"))
-            textField_appDir.setText(dir);
+        localDir = new File(String.valueOf(chooser.showOpenDialog(stage))).getAbsolutePath();
+        if(!localDir.endsWith("null"))
+            textField_appDir.setText(localDir);
 
-        if(comboBox_formats.getValue().equals(".7z") && !textField_appDir.getText().endsWith("7z.exe")) {
+        findArchivistTextColor();
+    }
+
+    @FXML
+    private void findArchivistTextColor() {
+        if(!textField_appDir.getText().endsWith("7z.exe")) {
             textField_appDir.setStyle("-fx-text-fill: red;");
         } else
             textField_appDir.setStyle("-fx-text-fill: black;");
@@ -289,10 +284,11 @@ public class C_Main {
         progressBar.setProgress(-1);
         button_search.setVisible(false);
         button_cancelSearch.setVisible(true);
+        button_cancelSearch.setCancelButton(true);
         label_status.setText("Suche läuft...");
         updateGui(true);
 
-        searchService = new SearchService(dir, comboBox_formats.getValue(),
+        searchService = new SearchService(dirRoot, comboBox_formats.getValue(),
                 textField_includeFilter.getText(), textField_excludeFilter.getText());
 
         searchService.setOnSucceeded(workerStateEvent -> {
@@ -301,6 +297,7 @@ public class C_Main {
             progressBar.setProgress(1);
             button_search.setVisible(true);
             button_cancelSearch.setVisible(false);
+            button_cancelSearch.setCancelButton(false);
             label_status.setText("Suche abgeschlossen.");
             updateGui(false);
         });
@@ -313,6 +310,7 @@ public class C_Main {
         progressBar.setProgress(0);
         button_search.setVisible(true);
         button_cancelSearch.setVisible(false);
+        button_cancelSearch.setCancelButton(false);
         label_status.setText("Suche abgebrochen.");
         updateGui(false);
     }
@@ -323,6 +321,7 @@ public class C_Main {
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Datei","*.csv"));
         chooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        chooser.setInitialFileName("archivelist.csv");
 
         try {
             file = chooser.showSaveDialog(stage);
@@ -331,23 +330,29 @@ public class C_Main {
             updateGui(true);
         } catch (NullPointerException e) {
             e.printStackTrace();
+            updateGui(false);
             return;
         }
 
-        ExportDataService exportDataService = new ExportDataService(archives, file);
+        if(file != null) {
+            ExportDataService exportDataService = new ExportDataService(archives, file);
 
-        exportDataService.setOnSucceeded(workerStateEvent -> {
-            if(exportDataService.getValue()) {
-                label_status.setText("Export abgeschlossen.");
-                progressBar.setProgress(1);
-            }
-            else {
-                label_status.setText("Export fehlgeschlagen.");
-                progressBar.setProgress(0);
-            }
+            exportDataService.setOnSucceeded(workerStateEvent -> {
+                if (exportDataService.getValue()) {
+                    label_status.setText("Export abgeschlossen.");
+                    progressBar.setProgress(1);
+                } else {
+                    label_status.setText("Export fehlgeschlagen.");
+                    progressBar.setProgress(0);
+                }
+                updateGui(false);
+            });
+            exportDataService.start();
+        } else {
+            label_status.setText("Export abgebrochen.");
             updateGui(false);
-        });
-        exportDataService.start();
+            progressBar.setProgress(0);
+        }
     }
 
     @FXML
@@ -360,12 +365,14 @@ public class C_Main {
         try {
             file = new File(chooser.showOpenDialog(stage).toString());
             updateGui(true);
-            progressBar.setProgress(-1);
             label_status.setText("Importiere...");
+            progressBar.setProgress(-1);
             archives.clear();
             tableView_archives.getItems().clear();
-        } catch (NullPointerException e1) {
-            System.err.println(e1.getMessage());
+        } catch (NullPointerException e) {
+            System.err.println(e.getMessage());
+            label_status.setText("Import abgebrochen.");
+            progressBar.setProgress(0);
             updateGui(false);
             return;
         }
@@ -373,16 +380,16 @@ public class C_Main {
         ImportDataService importDataService = new ImportDataService(file);
 
         importDataService.setOnCancelled(workerStateEvent -> {
-            progressBar.setProgress(0);
             label_status.setText("Import fehlgeschlagen. Bitte Datei prüfen.");
+            progressBar.setProgress(0);
             updateGui(false);
         });
 
         importDataService.setOnSucceeded(workerStateEvent -> {
             archives = importDataService.getValue();
             tableView_archives.setItems(archives);
-            progressBar.setProgress(1);
             label_status.setText("Import abgeschlossen.");
+            progressBar.setProgress(1);
             updateGui(false);
         });
         importDataService.start();
@@ -402,6 +409,7 @@ public class C_Main {
         button_cancelExtract.setVisible(true);
         button_extractSingle.setVisible(false);
         button_extractAll.setVisible(false);
+        button_cancelExtract.setCancelButton(true);
         label_status.setText("Entpacke...");
         updateGui(true);
 
@@ -424,17 +432,19 @@ public class C_Main {
                             this.cancel();
                             Platform.runLater(() -> {
                                 updateGui(false);
-                                progressBar.setProgress(1);
                                 button_cancelExtract.setVisible(false);
                                 button_extractSingle.setVisible(true);
                                 button_extractAll.setVisible(true);
+                                button_cancelExtract.setCancelButton(false);
                                 label_status.setText(countArchives < 0 ? "Vorgang abgebrochen." : "Fertig!");
+                                progressBar.setProgress(countArchives < 0 ? 0 : 1);
                             });
                         } else if (countTasks < comboBox_tasks.getValue() && !(countArchives < 0 || countArchives >= archives.size())) {
                             if(progressBar.getProgress() >= 0)  // Alles entpacken
                                 extractStart(countArchives);
                             else {                              // Auswahl entpacken
                                 Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
+                                archive.setExtracted(false);
                                 extractStart(archive.getID() -1);
                             }
                             countTasks++;
@@ -452,8 +462,7 @@ public class C_Main {
     @FXML
     private void extractStart(int index) {
         try {
-            extractService = new ExtractService(checkBox_useExternalApp.isSelected(), textField_appDir.getText(),
-                                                archives.get(index), pwField.getText());
+            extractService = new ExtractService(textField_appDir.getText(), archives.get(index), pwField.getText());
         } catch (IndexOutOfBoundsException e) {
             System.out.println(e.getMessage());
         }
@@ -520,12 +529,12 @@ public class C_Main {
         alert.setHeaderText("unZipper by André Krippendorf");
         alert.setContentText(
                 "CraftingIT GmbH\n" +
-                        "Erzbergerstraße 1-2\n" +
-                        "39104 Magdeburg\n" +
-                        "Deutschland\n" +
-                        "Telefon: +49 391 28921 500\n" +
-                        "Fax: +49 391 28921 555\n" +
-                        "Mail: info@crafting-it.de");
+                "Erzbergerstraße 1-2\n" +
+                "39104 Magdeburg\n" +
+                "Deutschland\n" +
+                "Telefon: +49 391 28921 500\n" +
+                "Fax: +49 391 28921 555\n" +
+                "Mail: info@crafting-it.de");
         alert.show();
     }
 
@@ -550,9 +559,12 @@ public class C_Main {
         }
 
         if(alert.showAndWait().get() == buttonYes) {
-            extractTaskService.cancel();
-            extractService.cancel();
-            searchService.cancel();
+            if (extractTaskService != null)
+                extractTaskService.cancel();
+            if (extractService != null)
+                extractService.cancel();
+            if (searchService != null)
+                searchService.cancel();
             stage.close();
         }
     }
@@ -566,18 +578,17 @@ public class C_Main {
         alert.setHeaderText("Prozesse abbrechen und Oberfläche zurücksetzen?");
         alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\n\nDabei kann zu einem Datenverlust kommen.");
 
-        if(searchService == null && extractTaskService == null && extractService == null && !isExtracting) {
-            App.setRoot("Main");
-            return;
-        }
-
-        if(alert.showAndWait().get() == buttonYes) {
-            if(extractTaskService != null)
-                extractTaskService.cancel();
-            if(extractService != null)
-                extractService.cancel();
-            if(searchService != null)
-                searchService.cancel();
+        if((searchService != null && searchService.isRunning()) || isExtracting) {
+            if (alert.showAndWait().get() == buttonYes) {
+                if (extractTaskService != null)
+                    extractTaskService.cancel();
+                if (extractService != null)
+                    extractService.cancel();
+                if (searchService != null)
+                    searchService.cancel();
+                App.setRoot("Main");
+            }
+        } else {
             App.setRoot("Main");
         }
     }

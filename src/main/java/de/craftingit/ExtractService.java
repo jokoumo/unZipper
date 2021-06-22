@@ -2,22 +2,16 @@ package de.craftingit;
 
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
-import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 public class ExtractService extends Service<Integer> {
     private final static boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
-    private final boolean EXEC_EXTERN;
     private final String DIR_APP;
     private final Archive ARCHIVE;
     private final String PASSWORD;
 
-    public ExtractService(boolean execExtern, String dirApp, Archive archive, String password) {
-        this.EXEC_EXTERN = execExtern;
+    public ExtractService(String dirApp, Archive archive, String password) {
         this.DIR_APP = dirApp;
         this.ARCHIVE = archive;
         this.PASSWORD = password;
@@ -29,49 +23,11 @@ public class ExtractService extends Service<Integer> {
             @Override
             protected Integer call() throws Exception {
                 if (!ARCHIVE.isExtracted()) {
-                    if(EXEC_EXTERN) {
-                        extractExtern();    //extern mit 7z.exe entpacken (für alle Formate)
-                    } else {
-                        extract7zIntern();  //intern entpacken (nur .7z Format)
-                    }
+                    extractExtern();    //extern mit 7zip entpacken (für alle Formate)
                 }
                 return 0;
             }
         };
-    }
-
-    private void extract7zIntern() {
-        File destFile;
-        ARCHIVE.setStatus("Wird entpackt...");
-
-        try(SevenZFile file = new SevenZFile(new File(ARCHIVE.getDIR().toString()), PASSWORD.getBytes(StandardCharsets.UTF_16LE))) {
-            SevenZArchiveEntry entry = file.getNextEntry();
-
-            while (entry != null) {
-                destFile = new File(ARCHIVE.getDIR().getParent().toString(), entry.getName());
-
-                try (FileOutputStream out = new FileOutputStream(destFile)) {
-                    byte[] content = new byte[(int) entry.getSize()];
-                    file.read(content, 0, content.length);
-                    out.write(content);
-                    ARCHIVE.setStatus("Entpackt");
-                    ARCHIVE.setExtracted(true);
-                } catch (Exception ex) {
-                    ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
-                    break;
-                } finally {
-                    try {
-                        if (Files.size(destFile.toPath()) == 0)
-                            Files.delete(destFile.toPath());
-                    } catch(Exception exDel) {
-                        System.err.println("Keine Datei gelöscht: " + exDel.getMessage());
-                    }
-                    entry = file.getNextEntry();
-                }
-            }
-        } catch(IOException e) {
-            ARCHIVE.setStatus("Passwort falsch oder Archiv beschädigt.");
-        }
     }
 
     private void extractExtern() {
