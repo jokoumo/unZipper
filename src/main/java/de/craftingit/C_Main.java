@@ -244,6 +244,11 @@ public class C_Main {
     }
 
     @FXML
+    private void clearRootAddition() {
+        textField_rootAddition.clear();
+    }
+
+    @FXML
     private void findArchivist() {
         String localDir = "";
         FileChooser chooser = new FileChooser();

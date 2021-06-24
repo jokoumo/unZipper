@@ -28,7 +28,7 @@
          <font>
             <Font name="SansSerif Regular" size="12.0" />
          </font></Button>
-      <ComboBox fx:id="comboBox_roots" layoutX="24.0" layoutY="53.0" prefHeight="25.0" prefWidth="84.0" />
+      <ComboBox fx:id="comboBox_roots" layoutX="24.0" layoutY="53.0" onAction="#clearRootAddition" prefHeight="25.0" prefWidth="84.0" />
       <Button fx:id="button_search" defaultButton="true" layoutX="14.0" layoutY="214.0" maxWidth="74.0" minHeight="25.0" minWidth="74.0" mnemonicParsing="false" onAction="#searchArchives" prefHeight="25.0" prefWidth="74.0" text="Suchen">
          <font>
             <Font name="SansSerif Regular" size="12.0" />

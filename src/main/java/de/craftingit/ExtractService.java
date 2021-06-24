@@ -23,7 +23,7 @@ public class ExtractService extends Service<Integer> {
             @Override
             protected Integer call() throws Exception {
                 if (!ARCHIVE.isExtracted()) {
-                    extractExtern();    //extern mit 7zip entpacken (für alle Formate)
+                    extractExtern();    //extern mit 7-zip entpacken (für alle Formate)
                 }
                 return 0;
             }
@@ -31,16 +31,22 @@ public class ExtractService extends Service<Integer> {
     }
 
     private void extractExtern() {
-        ARCHIVE.setStatus("Wird entpackt...");
-        ProcessBuilder builder;
+        if(!(new File(ARCHIVE.getDIR().toString()).exists())) {
+            ARCHIVE.setStatus("Archiv nicht gefunden.");
+            return;
+        } else {
+            ARCHIVE.setStatus("Wird entpackt...");
+        }
+
         try {
+            ProcessBuilder builder;
             if(IS_WINDOWS) {
                 builder = new ProcessBuilder(
                 "cmd.exe", "/c",
                         "\"" + DIR_APP + "\" e \"" +                    //Pfad der 7z.exe + (e)xtract-Anweisung
                         ARCHIVE.getDIR() + "\" -p" +                    //Pfad des Archivs + (-p)assword Switch
                         PASSWORD + " -o\"" +                            //Passwort + (-o)Zielverzeichnis
-                        ARCHIVE.getDIR().getParent() + "\\\" -aos");    //Pfad Zielverzeichnis + (-aos)Nichts überschreiben, sondern überspringen
+                        ARCHIVE.getDIR().getParent() + "\\\" -aos");    //Pfad Zielverzeichnis + (-aos)Nichts überschreiben
             } else {
                 builder = new ProcessBuilder(
                 "7z", "e",
