@@ -23,12 +23,12 @@ public class C_Main {
     private final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
     private final double MIN_WINDOW_HEIGHT = 700;
     private final double MIN_WINDOW_WIDTH = 965;
-    private final int MAX_TASKS = 6;
+    private final int MAX_TASKS = 8;
     private int countTasks;
     private int countArchives;
     private int countSucceededServices;
     private double windowWidth;
-    private boolean isExtracting;
+    private boolean isBusy;
     private Stage stage = null;
     private ObservableList<Archive> archives = FXCollections.observableArrayList();
     private File[] roots;
@@ -98,8 +98,9 @@ public class C_Main {
     private void initialize() {
         updateRoots();
 
-        for(int i = 1; i <= MAX_TASKS; i++)
+        for(int i = 1; i <= MAX_TASKS; i++) {
             comboBox_tasks.getItems().add(i);
+        }
         comboBox_tasks.setValue(1);
 
         comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Auslastung von Prozessor und Datenträger."));
@@ -161,19 +162,20 @@ public class C_Main {
         backgroundService.setPeriod(Duration.millis(50));
         backgroundService.start();
 
-        // Wenn kein MS Windows verwendet wird:
         if(!IS_WINDOWS) {
             comboBox_roots.setDisable(true);
             textField_appDir.setDisable(true);
             button_updateRoots.setDisable(true);
             button_findArchivist.setDisable(true);
             textField_appDir.setText("Installation von \"p7zip-full\" benötigt");
-        } else
+        } else {
             textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
+            findArchivistTextColor();
+        }
     }
 
-    @FXML
     private void updateGui(boolean disable) {
+        isBusy = disable;
         button_rootAddition.setDisable(disable);
         button_search.setDisable(disable);
         button_updateRoots.setDisable(disable);
@@ -215,12 +217,12 @@ public class C_Main {
         comboBox_roots.setValue(roots[0].toString());
     }
 
-    @FXML
     private void changeDir() {
-        if(IS_WINDOWS)
+        if(IS_WINDOWS) {
             dirRoot = Paths.get(comboBox_roots.getValue() + (textField_rootAddition.getText().isEmpty() ? "." : textField_rootAddition.getText()));
-        else
+        } else {
             dirRoot = Paths.get(comboBox_roots.getValue() + textField_rootAddition.getText());
+        }
     }
 
     @FXML
@@ -228,10 +230,12 @@ public class C_Main {
         try {
             String localDir = new DirectoryChooser().showDialog(stage).toString();
             for(File root : roots) {
-                if(localDir.contains(root.toString()))
+                if(localDir.contains(root.toString())) {
                     comboBox_roots.setValue(root.toString());
-                if(IS_WINDOWS)
+                }
+                if(IS_WINDOWS) {
                     localDir = localDir.replace(root.toString(), "");
+                }
             }
             textField_rootAddition.setText(localDir);
         } catch (Exception e) {
@@ -251,18 +255,20 @@ public class C_Main {
             chooser.setInitialDirectory(new File(System.getProperty("user.home")));
         }
         localDir = new File(String.valueOf(chooser.showOpenDialog(stage))).getAbsolutePath();
-        if(!localDir.endsWith("null"))
+        if(!localDir.endsWith("null")) {
             textField_appDir.setText(localDir);
+        }
 
         findArchivistTextColor();
     }
 
     @FXML
     private void findArchivistTextColor() {
-        if(!textField_appDir.getText().endsWith("7z.exe")) {
+        if(!textField_appDir.getText().endsWith("7z.exe") || !(new File(textField_appDir.getText()).exists())) {
             textField_appDir.setStyle("-fx-text-fill: red;");
-        } else
+        } else {
             textField_appDir.setStyle("-fx-text-fill: black;");
+        }
     }
 
     @FXML
@@ -289,11 +295,12 @@ public class C_Main {
         updateGui(true);
 
         searchService = new SearchService(dirRoot, comboBox_formats.getValue(),
-                textField_includeFilter.getText(), textField_excludeFilter.getText());
+                        textField_includeFilter.getText(), textField_excludeFilter.getText());
 
         searchService.setOnSucceeded(workerStateEvent -> {
             archives.addAll(searchService.getValue());
             tableView_archives.setItems(archives);
+            isBusy = false;
             progressBar.setProgress(1);
             button_search.setVisible(true);
             button_cancelSearch.setVisible(false);
@@ -317,6 +324,7 @@ public class C_Main {
 
     @FXML
     private void exportTable() {
+        isBusy = true;
         File file;
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Datei","*.csv"));
@@ -353,10 +361,12 @@ public class C_Main {
             updateGui(false);
             progressBar.setProgress(0);
         }
+        isBusy = false;
     }
 
     @FXML
     private  void importTable() {
+        isBusy = true;
         FileChooser chooser = new FileChooser();
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Dateien","*.csv"));
         chooser.setInitialDirectory(new File(System.getProperty("user.home")));
@@ -402,7 +412,6 @@ public class C_Main {
 
     @FXML
     private void extractArchive(ActionEvent event) {
-        isExtracting = true;
         countSucceededServices = 0;
         countArchives = 0;
         countTasks = 0;
@@ -416,10 +425,9 @@ public class C_Main {
         if(event.getSource() == button_extractSingle) {
             countArchives = archives.size() -1;
             progressBar.setProgress(-1);
-        }
-
-        if(event.getSource() == button_extractAll)
+        } else if(event.getSource() == button_extractAll) {
             progressBar.setProgress(0);
+        }
 
         extractTaskService = new ScheduledService<Boolean>() {
             @Override
@@ -428,7 +436,6 @@ public class C_Main {
                     @Override
                     protected Boolean call() {
                         if (countTasks == 0 && (countArchives < 0 || countArchives >= archives.size())) {
-                            isExtracting = false;
                             this.cancel();
                             Platform.runLater(() -> {
                                 updateGui(false);
@@ -440,9 +447,10 @@ public class C_Main {
                                 progressBar.setProgress(countArchives < 0 ? 0 : 1);
                             });
                         } else if (countTasks < comboBox_tasks.getValue() && !(countArchives < 0 || countArchives >= archives.size())) {
-                            if(progressBar.getProgress() >= 0)  // Alles entpacken
+                            if(progressBar.getProgress() >= 0) {    // Alles entpacken
                                 extractStart(countArchives);
-                            else {                              // Auswahl entpacken
+                            }
+                            else {                                  // Auswahl entpacken
                                 Archive archive = tableView_archives.getSelectionModel().getSelectedItem();
                                 archive.setExtracted(false);
                                 extractStart(archive.getID() -1);
@@ -459,7 +467,6 @@ public class C_Main {
         extractTaskService.start();
     }
 
-    @FXML
     private void extractStart(int index) {
         try {
             extractService = new ExtractService(textField_appDir.getText(), archives.get(index), pwField.getText());
@@ -484,11 +491,13 @@ public class C_Main {
                 }
             }
 
-            if (checkBox_hideExtracted.isSelected())
+            if (checkBox_hideExtracted.isSelected()) {
                 hideExtracted();
+            }
 
-            if (countArchives >= 0 && progressBar.getProgress() >= 0)
+            if (countArchives >= 0 && progressBar.getProgress() >= 0) {
                 progressBar.setProgress((double) countSucceededServices / (double) archives.size());
+            }
         });
 
         extractService.setOnFailed(workerStateEvent -> {
@@ -513,8 +522,9 @@ public class C_Main {
         if (checkBox_hideExtracted.isSelected()) {
             ObservableList<Archive> hiddenArchives = FXCollections.observableArrayList();
             for (Archive archive : archives) {
-                if (!archive.isExtracted())
+                if (!archive.isExtracted()) {
                     hiddenArchives.add(archive);
+                }
             }
             tableView_archives.setItems(hiddenArchives);
         } else {
@@ -538,6 +548,18 @@ public class C_Main {
         alert.show();
     }
 
+    private void cancelServices() {
+        if (extractTaskService != null) {
+            extractTaskService.cancel();
+        }
+        if (extractService != null) {
+            extractService.cancel();
+        }
+        if (searchService != null) {
+            searchService.cancel();
+        }
+    }
+
     @FXML
     private void closeApp() {
         ButtonType buttonYes = new ButtonType("Ja", ButtonBar.ButtonData.YES);
@@ -545,26 +567,17 @@ public class C_Main {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", buttonYes, buttonNo);
         alert.setTitle("Beenden");
         alert.setHeaderText("Prozesse abbrechen und beenden?");
+        alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?");
 
-        if(stage == null)
-            stage = (Stage) anchorPane_main.getScene().getWindow();
-
-        if(searchService != null && searchService.isRunning()) {
+        if(isBusy) {
             alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?");
-        } else if(isExtracting) {
-            alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\n\nDabei kann zu einem Datenverlust kommen.");
         } else {
             stage.close();
             return;
         }
 
         if(alert.showAndWait().get() == buttonYes) {
-            if (extractTaskService != null)
-                extractTaskService.cancel();
-            if (extractService != null)
-                extractService.cancel();
-            if (searchService != null)
-                searchService.cancel();
+            cancelServices();
             stage.close();
         }
     }
@@ -576,16 +589,11 @@ public class C_Main {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", buttonYes, buttonNo);
         alert.setTitle("GUI zurücksetzen");
         alert.setHeaderText("Prozesse abbrechen und Oberfläche zurücksetzen?");
-        alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm beenden?\n\nDabei kann zu einem Datenverlust kommen.");
+        alert.setContentText("Alle laufenden Prozesse abbrechen und das Programm zurücksetzen?");
 
-        if((searchService != null && searchService.isRunning()) || isExtracting) {
+        if(isBusy) {
             if (alert.showAndWait().get() == buttonYes) {
-                if (extractTaskService != null)
-                    extractTaskService.cancel();
-                if (extractService != null)
-                    extractService.cancel();
-                if (searchService != null)
-                    searchService.cancel();
+                cancelServices();
                 App.setRoot("Main");
             }
         } else {

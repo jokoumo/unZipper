@@ -34,7 +34,7 @@ public class SearchService extends Service<ObservableList<Archive>> {
 
                         @Override
                         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                            if(file.toString().endsWith(FORMAT) && !(file.toString().contains("$RECYCLE") || file.toString().contains("Trash/files"))) {
+                            if(file.toString().endsWith(FORMAT) && !(file.toString().toLowerCase().contains("$recycle") || file.toString().toLowerCase().contains("trash/files"))) {
                                 if(file.getFileName().toString().contains(INCLUDE)) {
                                     if(EXCLUDE.isEmpty() || !file.getFileName().toString().contains(EXCLUDE)) {
                                         archives.add(new Archive(file.toAbsolutePath()));
@@ -47,12 +47,9 @@ public class SearchService extends Service<ObservableList<Archive>> {
 
                         @Override
                         public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                            if(exc instanceof AccessDeniedException)
+                            if(exc instanceof FileSystemException || exc instanceof FileNotFoundException) {
                                 return FileVisitResult.SKIP_SUBTREE;
-                            if(exc instanceof FileSystemException)
-                                return FileVisitResult.SKIP_SUBTREE;
-                            if(exc instanceof FileNotFoundException)
-                                return FileVisitResult.SKIP_SUBTREE;
+                            }
                             return super.visitFileFailed(file, exc);
                         }
                     });
