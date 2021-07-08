@@ -109,6 +109,7 @@ public class C_Main {
 
     comboBox_tasks.setTooltip(new Tooltip("Viele Prozesse erhöhen die Auslastung von Prozessor und Datenträger."));
     textField_rootAddition.setTooltip(new Tooltip("In MS Windows z.B. 'Benutzer\\Default'. Andere z.B. 'home/usr'"));
+    textField_targetDir.setTooltip(new Tooltip("Entpackt alle Dateien in das angegebene Verzeichnis. Leer lassen, um im Stammverzeichnis zu entpacken."));
     checkBox_hideExtracted.setTooltip(new Tooltip("Bereits entpackte Archive werden ausgeblendet"));
     checkBox_deleteExtracted.setTooltip(new Tooltip("Archive werden nach dem erfolgreichen Entpacken gelöscht."));
     button_extractSingle.setTooltip(new Tooltip("Entpackt das ausgewählte Archiv."));
@@ -135,37 +136,6 @@ public class C_Main {
     button_cancelExtract.setVisible(false);
     menuItem_exportTable.setDisable(true);
 
-    ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
-      @Override
-      protected Task<Boolean> createTask() {
-        return new Task<Boolean>() {
-          @Override
-          protected Boolean call() {
-            try {
-              if (stage == null) {
-                stage = (Stage) anchorPane_main.getScene().getWindow();
-                stage.setOnCloseRequest(event -> {
-                  event.consume();
-                  closeApp();
-                });
-              }
-              if (windowWidth != stage.getWidth()) {
-                windowWidth = stage.getWidth();
-                progressBar.setLayoutX(windowWidth / 2 - progressBar.getWidth() / 2);
-                label_status.setLayoutX(windowWidth / 2 - label_status.getWidth() / 2);
-                tColumn_dir.setPrefWidth(tableView_archives.getWidth() - tColumn_id.getWidth() - tColumn_status.getWidth());
-              }
-            } catch (Exception e) {
-              System.err.println("Das muss so sein: " + e.getMessage());
-            }
-            return null;
-          }
-        };
-      }
-    };
-    backgroundService.setPeriod(Duration.millis(50));
-    backgroundService.start();
-
     if (!IS_WINDOWS) {
       comboBox_roots.setDisable(true);
       textField_appDir.setDisable(true);
@@ -176,6 +146,40 @@ public class C_Main {
       textField_appDir.setText("C:\\Program Files\\7-Zip\\7z.exe");
       setArchivistDirTextColor();
     }
+
+    Platform.runLater(() -> {
+      if (stage == null) {
+        stage = (Stage) anchorPane_main.getScene().getWindow();
+        stage.setOnCloseRequest(event -> {
+          event.consume();
+          closeApp();
+        });
+      }
+      alignGui();
+    });
+  }
+
+  @FXML
+  private void alignGui() {
+    ScheduledService<Boolean> backgroundService = new ScheduledService<Boolean>() {
+      @Override
+      protected Task<Boolean> createTask() {
+        return new Task<Boolean>() {
+          @Override
+          protected Boolean call() {
+            if (windowWidth != stage.getWidth()) {
+              windowWidth = stage.getWidth();
+              progressBar.setLayoutX(windowWidth / 2 - progressBar.getWidth() / 2);
+              label_status.setLayoutX(windowWidth / 2 - label_status.getWidth() / 2);
+              tColumn_dir.setPrefWidth(tableView_archives.getWidth() - tColumn_id.getWidth() - tColumn_status.getWidth());
+            }
+            return null;
+          }
+        };
+      }
+    };
+    backgroundService.setPeriod(Duration.millis(50));
+    backgroundService.start();
   }
 
   private void updateGui(boolean disable) {
