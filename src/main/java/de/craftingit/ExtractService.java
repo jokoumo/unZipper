@@ -63,13 +63,13 @@ public class ExtractService extends Service<Integer> {
         builder = new ProcessBuilder(
             "cmd.exe", "/c",
             "\"" + DIR_APP +                             //Pfad der 7z.exe
-            "\" e \"" + ARCHIVE.getDIR() +               //(e)xtract-Anweisung + Pfad des Archivs
+            "\" x \"" + ARCHIVE.getDIR() +               //(e)xtract-Anweisung + Pfad des Archivs
             "\" -p" + PASSWORD +                         //(-p)assword Switch
             " -o\"" + targetDir +                        //(-o)Zielverzeichnis
             "\\\" -aos");                                //(-aos)Nichts überschreiben
       } else {
         builder = new ProcessBuilder(
-            "7z", "e",
+            "7z", "x",
             ARCHIVE.getDIR().toString(),
             "-p" + PASSWORD,
             "-o" + targetDir,
