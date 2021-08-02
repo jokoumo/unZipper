@@ -114,8 +114,8 @@ public class C_Main {
     checkBox_deleteExtracted.setTooltip(new Tooltip("Archive werden nach dem erfolgreichen Entpacken gelöscht."));
     button_extractSingle.setTooltip(new Tooltip("Entpackt das ausgewählte Archiv."));
     button_extractAll.setTooltip(new Tooltip("Entpackt alle aufgelisteten Archive."));
-    pwField.setTooltip(new Tooltip("*Archive ohne Passwortschutz, werden immer entpackt."));
-    label_pw.setTooltip(new Tooltip("*Archive ohne Passwortschutz, werden immer entpackt."));
+    pwField.setTooltip(new Tooltip("*Archive ohne Passwortschutz werden immer entpackt."));
+    label_pw.setTooltip(new Tooltip("*Archive ohne Passwortschutz werden immer entpackt."));
 
     comboBox_formats.getItems().add(".7z");
     comboBox_formats.getItems().add(".img");
